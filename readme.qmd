@@ -2,7 +2,9 @@
 title: "Air Quality Trend Detection using AQEval"
 author: "Chris Rushton"
 date: "2025-03-05"
-format: html
+format:
+  gfm:
+    toc: false
 execute:
   echo: true
 ---
