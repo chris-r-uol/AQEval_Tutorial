@@ -1,0 +1,148 @@
+---
+title: "Air Quality Trend Detection using AQEval"
+author: "Chris Rushton"
+date: "2025-03-05"
+format: html
+execute:
+  echo: true
+---
+
+# Setup
+
+## Package Loading
+
+Before we start the analysis, we need to load the required libraries. The `AQEval` package provides functions for trend analysis and breakpoint detection, while `openair` offers tools to import and visualize air quality data.
+
+```{r}
+library(openair)
+library(ggplot2)
+library(AQEval)
+library(dplyr)
+library(lubridate)
+library(worldmet)
+library(glue)
+```
+
+## Data Retrieval
+
+We will retrieve data for a specific site (in this case, `"bdma"`) from the AURN database. The data spans the years 2018 to 2023. Note: The range operator (`2018:2023`) in R generates a sequence of years to download data for multiple years at once.
+
+```{r}
+data = importAURN(site = 'bdma', year = 2018:2023)
+```
+
+## Data Inspection
+
+After downloading the data, it is good practice to inspect it. We use `summary()` to get an overview of the data frame and `print()` to display the first 10 rows. This helps verify that the data has been loaded correctly and gives insight into its structure.
+
+```{r}
+summary(data)
+print(data[1:10,])
+```
+
+# Initial Visualisations
+
+## Time Plot
+
+A quick visualization of the raw time series for the nitrogen dioxide (`no2`) concentration can be produced with `timePlot()`. This helps in understanding the overall trends and variability in the data.
+
+```{r}
+time_plot = openair::timePlot(data, pollutant="no2")
+
+```
+
+# De-Weathering and De-Seasoning
+
+Air quality data is often influenced by meteorological conditions and seasonal variations. To isolate the contribution of pollutants from these effects, we use the `isolateContribution()` function. Here, we remove both seasonal patterns and weather-related influences (using the background variable `"air_temp"`).
+
+```{r}
+dwds = AQEval::isolateContribution(data, "no2", deseason=TRUE, deweather=TRUE, background='air_temp')
+
+```
+
+The `dwds` variable is a list of the de-weathered and de-seasoned values for `no2`, so we need to add it back to the original data frame.
+
+```{r}
+data[["deweatherdeseason"]] = dwds
+```
+
+We can now plot a time series again to see the difference.
+
+```{r}
+time_plot_dwds = timePlot(data, pollutant="deweatherdeseason")
+
+```
+
+# Further Processing
+
+Typically we prefer our data to be averaged to 8-hour intervals to smooth out shorter term fluctuations. We can do this using the `timeAverage()` function from `openair`.
+
+```{r}
+data_8h = openair::timeAverage(data, avg.time="8 hour")
+```
+
+We can now find our break points. Breakpoint detection helps in identifying moments when the statistical properties of the data change, which can indicate shifts in pollution sources or the effectiveness of control measures. We perform this analysis on the 8-hour averaged data. The sensitivity parameter `h` determines the resolution of the breakpoints (a lower value can capture finer details but may require more computation time). We have set the `h` parameter to `0.3` for this example as it is quicker to run, but we would normally evaluate this data with `h=0.12` for 8-hour data resolution. Experiment with different `h` parameters to see what you can find.
+
+```{r}
+break_points = AQEval::findBreakPoints(data_8h, "deweatherdeseason", h=0.3)
+```
+
+## Calculating the Trends for Each Break Segment
+
+Once breakpoints are detected, the next step is to calculate trends across each segment using the `quantBreakSegments()` function.
+
+```{r}
+quant_break_segments = AQEval::quantBreakSegments(data_8h, "deweatherdeseason", break_points)
+```
+
+## Visualising the Break Points
+
+We can customise the time range and add descriptive labels to the plots to make them more interpretable. We now set a custom date range and add a title and subtitle to the breakpoint detection plot `quant_break_segments$plot`.
+
+```{r}
+start_date <- as.POSIXct("2018-01-01 00:00:00", format = "%Y-%m-%d %H:%M:%S")
+end_date <- as.POSIXct("2023-09-30 00:00:00", format = "%Y-%m-%d %H:%M:%S")
+
+custom_plot <- quant_break_segments$plot + 
+  labs(
+    title = "Break Point Detection at BDMA",
+    subtitle = "Time Average = 8h, Sensitivity (h) parameter = 0.12"
+  ) + 
+  scale_x_datetime(
+    limits = c(start_date, end_date)
+  )
+
+custom_plot
+```
+
+## View The Report
+
+It is good to visualise the trends to get an understanding of the general direction of the data set however it is just as important to report on the quantitative values that these methods produce. A full report can be extracted from the results.
+
+```{r}
+print(quant_break_segments$report)
+```
+
+# Meteorological Data Using WorldMet
+
+We may need to integrate different data sets into our analysis. One useful package for doing this is `worldmet`. This package allows us to access different weather sites. In this code we identify the `bradford_met` site id and use the `worldmet::importNOAA()` function to download it.
+
+```{r}
+bradford_met = "033300-99999"
+met_data = worldmet::importNOAA(code=bradford_met, year=2018:2024)
+```
+
+We can use the `left_join` function to join two data frames, `data` and `met_data` based on the content of the `by` argument. Note that the `worldmet` and `openair` packages are designed to work nicely together so do not need any modification, but if you have different data sets that do not have consistently labelled columns then you may have to do some extra steps here.
+
+```{r}
+data_merged = left_join(data, met_data, by='date')
+```
+
+# Tasks
+
+The following tasks are designed to build on the learning achieved during this lecture and practical session, giving you the skills to conduct this analysis on sites of your choosing.
+
+1.  Calculate the location of the breakpoints for `nox` at the `bdma` site
+2.  Calculate the location of the breakpoints for `nox` and `no2` at the `led6` site
+3.  Identify a background site suitable for performing a control task for both the `led6` and `bdma` sites
+4.  Show the impact of fine tuning the `h` parameter for the `no2` concentration analysis

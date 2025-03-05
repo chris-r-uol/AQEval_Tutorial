@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.5.57">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Chris Rushton">
+<meta name="dcterms.date" content="2025-03-05">
+
+<title>Air Quality Trend Detection using AQEval</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="readme_files/libs/clipboard/clipboard.min.js"></script>
+<script src="readme_files/libs/quarto-html/quarto.js"></script>
+<script src="readme_files/libs/quarto-html/popper.min.js"></script>
+<script src="readme_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="readme_files/libs/quarto-html/anchor.min.js"></script>
+<link href="readme_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="readme_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="readme_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="readme_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="readme_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Air Quality Trend Detection using AQEval</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Chris Rushton </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">March 5, 2025</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="setup" class="level1">
+<h1>Setup</h1>
+<section id="package-loading" class="level2">
+<h2 class="anchored" data-anchor-id="package-loading">Package Loading</h2>
+<p>Before we start the analysis, we need to load the required libraries. The <code>AQEval</code> package provides functions for trend analysis and breakpoint detection, while <code>openair</code> offers tools to import and visualize air quality data.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(openair)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(AQEval)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'dplyr'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:stats':
+
+    filter, lag</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:base':
+
+    intersect, setdiff, setequal, union</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(lubridate)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'lubridate'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:base':
+
+    date, intersect, setdiff, union</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(worldmet)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(glue)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="data-retrieval" class="level2">
+<h2 class="anchored" data-anchor-id="data-retrieval">Data Retrieval</h2>
+<p>We will retrieve data for a specific site (in this case, <code>"bdma"</code>) from the AURN database. The data spans the years 2018 to 2023. Note: The range operator (<code>2018:2023</code>) in R generates a sequence of years to download data for multiple years at once.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>data <span class="ot">=</span> <span class="fu">importAURN</span>(<span class="at">site =</span> <span class="st">'bdma'</span>, <span class="at">year =</span> <span class="dv">2018</span><span class="sc">:</span><span class="dv">2023</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="data-inspection" class="level2">
+<h2 class="anchored" data-anchor-id="data-inspection">Data Inspection</h2>
+<p>After downloading the data, it is good practice to inspect it. We use <code>summary()</code> to get an overview of the data frame and <code>print()</code> to display the first 10 rows. This helps verify that the data has been loaded correctly and gives insight into its structure.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(data)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>     site               code                date                    
+ Length:52584       Length:52584       Min.   :2018-01-01 00:00:00  
+ Class :character   Class :character   1st Qu.:2019-07-02 17:45:00  
+ Mode  :character   Mode  :character   Median :2020-12-31 11:30:00  
+                                       Mean   :2020-12-31 11:30:00  
+                                       3rd Qu.:2022-07-02 05:15:00  
+                                       Max.   :2023-12-31 23:00:00  
+                                                                    
+      nox               no2                no                ws        
+ Min.   :  1.363   Min.   :  0.175   Min.   :  0.341   Min.   : 0.000  
+ 1st Qu.: 39.078   1st Qu.: 19.456   1st Qu.: 12.096   1st Qu.: 2.400  
+ Median : 67.501   Median : 32.243   Median : 22.672   Median : 3.500  
+ Mean   : 89.045   Mean   : 37.190   Mean   : 33.831   Mean   : 3.872  
+ 3rd Qu.:116.474   3rd Qu.: 51.208   3rd Qu.: 42.437   3rd Qu.: 5.000  
+ Max.   :952.880   Max.   :169.909   Max.   :510.640   Max.   :17.300  
+ NA's   :3442      NA's   :3442      NA's   :3437      NA's   :1200    
+       wd           air_temp     
+ Min.   :  0.0   Min.   :-7.500  
+ 1st Qu.:138.0   1st Qu.: 4.900  
+ Median :244.1   Median : 8.600  
+ Mean   :210.0   Mean   : 8.961  
+ 3rd Qu.:284.3   3rd Qu.:12.900  
+ Max.   :360.0   Max.   :31.000  
+ NA's   :1200    NA's   :1200    </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(data[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>,])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 10 × 9
+   site         code  date                  nox   no2    no    ws    wd air_temp
+   &lt;chr&gt;        &lt;chr&gt; &lt;dttm&gt;              &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt;
+ 1 Bradford Ma… BDMA  2018-01-01 00:00:00    NA    NA    NA   6.5  262       4.1
+ 2 Bradford Ma… BDMA  2018-01-01 01:00:00    NA    NA    NA   6.7  254.      4  
+ 3 Bradford Ma… BDMA  2018-01-01 02:00:00    NA    NA    NA   7.2  247.      3.7
+ 4 Bradford Ma… BDMA  2018-01-01 03:00:00    NA    NA    NA   7    249       3.9
+ 5 Bradford Ma… BDMA  2018-01-01 04:00:00    NA    NA    NA   7    250.      4  
+ 6 Bradford Ma… BDMA  2018-01-01 05:00:00    NA    NA    NA   5.9  250.      3.9
+ 7 Bradford Ma… BDMA  2018-01-01 06:00:00    NA    NA    NA   5.3  249.      3.9
+ 8 Bradford Ma… BDMA  2018-01-01 07:00:00    NA    NA    NA   4.4  245.      3.7
+ 9 Bradford Ma… BDMA  2018-01-01 08:00:00    NA    NA    NA   4    241.      3.4
+10 Bradford Ma… BDMA  2018-01-01 09:00:00    NA    NA    NA   4.5  245.      4.2</code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="initial-visualisations" class="level1">
+<h1>Initial Visualisations</h1>
+<section id="time-plot" class="level2">
+<h2 class="anchored" data-anchor-id="time-plot">Time Plot</h2>
+<p>A quick visualization of the raw time series for the nitrogen dioxide (<code>no2</code>) concentration can be produced with <code>timePlot()</code>. This helps in understanding the overall trends and variability in the data.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>time_plot <span class="ot">=</span> openair<span class="sc">::</span><span class="fu">timePlot</span>(data, <span class="at">pollutant=</span><span class="st">"no2"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="readme_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="de-weathering-and-de-seasoning" class="level1">
+<h1>De-Weathering and De-Seasoning</h1>
+<p>Air quality data is often influenced by meteorological conditions and seasonal variations. To isolate the contribution of pollutants from these effects, we use the <code>isolateContribution()</code> function. Here, we remove both seasonal patterns and weather-related influences (using the background variable <code>"air_temp"</code>).</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>dwds <span class="ot">=</span> AQEval<span class="sc">::</span><span class="fu">isolateContribution</span>(data, <span class="st">"no2"</span>, <span class="at">deseason=</span><span class="cn">TRUE</span>, <span class="at">deweather=</span><span class="cn">TRUE</span>, <span class="at">background=</span><span class="st">'air_temp'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>no2 ~ +s(air_temp) + te(wd, ws) + s(year.day) + s(day.hour)</code></pre>
+</div>
+</div>
+<p>The <code>dwds</code> variable is a list of the de-weathered and de-seasoned values for <code>no2</code>, so we need to add it back to the original data frame.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>data[[<span class="st">"deweatherdeseason"</span>]] <span class="ot">=</span> dwds</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>We can now plot a time series again to see the difference.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>time_plot_dwds <span class="ot">=</span> <span class="fu">timePlot</span>(data, <span class="at">pollutant=</span><span class="st">"deweatherdeseason"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="readme_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="further-processing" class="level1">
+<h1>Further Processing</h1>
+<p>Typically we prefer our data to be averaged to 8-hour intervals to smooth out shorter term fluctuations. We can do this using the <code>timeAverage()</code> function from <code>openair</code>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>data_8h <span class="ot">=</span> openair<span class="sc">::</span><span class="fu">timeAverage</span>(data, <span class="at">avg.time=</span><span class="st">"8 hour"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>We can now find our break points. Breakpoint detection helps in identifying moments when the statistical properties of the data change, which can indicate shifts in pollution sources or the effectiveness of control measures. We perform this analysis on the 8-hour averaged data. The sensitivity parameter <code>h</code> determines the resolution of the breakpoints (a lower value can capture finer details but may require more computation time). We have set the <code>h</code> parameter to <code>0.3</code> for this example as it is quicker to run, but we would normally evaluate this data with <code>h=0.12</code> for 8-hour data resolution. Experiment with different <code>h</code> parameters to see what you can find.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>break_points <span class="ot">=</span> AQEval<span class="sc">::</span><span class="fu">findBreakPoints</span>(data_8h, <span class="st">"deweatherdeseason"</span>, <span class="at">h=</span><span class="fl">0.3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<section id="calculating-the-trends-for-each-break-segment" class="level2">
+<h2 class="anchored" data-anchor-id="calculating-the-trends-for-each-break-segment">Calculating the Trends for Each Break Segment</h2>
+<p>Once breakpoints are detected, the next step is to calculate trends across each segment using the <code>quantBreakSegments()</code> function.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>quant_break_segments <span class="ot">=</span> AQEval<span class="sc">::</span><span class="fu">quantBreakSegments</span>(data_8h, <span class="st">"deweatherdeseason"</span>, break_points)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>building 5 segments</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+2018-01-01 to 2019-11-18 16:00:00 (686.666666666667)</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>NA-&gt;41.56;NA (NA%)</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+2019-11-18 16:00:00 to 2020-04-06 (139.333333333333)</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>41.56-&gt;34.13;-7.425 (-17.87%)</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+2020-04-06 to 2022-04-10 (734)</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>34.13-&gt;37.96;3.828 (11.22%)</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+2022-04-10 to 2022-05-10 16:00:00 (30.6666666666667)</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>37.96-&gt;33.17;-4.789 (-12.62%)</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+2022-05-10 16:00:00 to 2023-12-31 16:00:00 (600)</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>33.17-&gt;32.12;-1.052 (-3.171%)</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 22 rows containing missing values or values outside the scale range
+(`geom_path()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="readme_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="visualising-the-break-points" class="level2">
+<h2 class="anchored" data-anchor-id="visualising-the-break-points">Visualising the Break Points</h2>
+<p>We can customise the time range and add descriptive labels to the plots to make them more interpretable. We now set a custom date range and add a title and subtitle to the breakpoint detection plot <code>quant_break_segments$plot</code>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>start_date <span class="ot">&lt;-</span> <span class="fu">as.POSIXct</span>(<span class="st">"2018-01-01 00:00:00"</span>, <span class="at">format =</span> <span class="st">"%Y-%m-%d %H:%M:%S"</span>)</span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>end_date <span class="ot">&lt;-</span> <span class="fu">as.POSIXct</span>(<span class="st">"2023-09-30 00:00:00"</span>, <span class="at">format =</span> <span class="st">"%Y-%m-%d %H:%M:%S"</span>)</span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>custom_plot <span class="ot">&lt;-</span> quant_break_segments<span class="sc">$</span>plot <span class="sc">+</span> </span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Break Point Detection at BDMA"</span>,</span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">subtitle =</span> <span class="st">"Time Average = 8h, Sensitivity (h) parameter = 0.12"</span></span>
+<span id="cb34-8"><a href="#cb34-8" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span> </span>
+<span id="cb34-9"><a href="#cb34-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_datetime</span>(</span>
+<span id="cb34-10"><a href="#cb34-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">limits =</span> <span class="fu">c</span>(start_date, end_date)</span>
+<span id="cb34-11"><a href="#cb34-11" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb34-12"><a href="#cb34-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-13"><a href="#cb34-13" aria-hidden="true" tabindex="-1"></a>custom_plot</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 301 rows containing missing values or values outside the scale range
+(`geom_path()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="readme_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="view-the-report" class="level2">
+<h2 class="anchored" data-anchor-id="view-the-report">View The Report</h2>
+<p>It is good to visualise the trends to get an understanding of the general direction of the data set however it is just as important to report on the quantitative values that these methods produce. A full report can be extracted from the results.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(quant_break_segments<span class="sc">$</span>report)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>             s1.date1            s1.date2  s1.date.delta    s1.c0    s1.c1
+1 2018-01-01 00:00:00 2019-11-18 16:00:00 686.66667 days       NA 41.55594
+2 2019-11-18 16:00:00 2020-04-06 00:00:00 139.33333 days 41.55594 34.13056
+3 2020-04-06 00:00:00 2022-04-10 00:00:00 734.00000 days 34.13056 37.95836
+4 2022-04-10 00:00:00 2022-05-10 16:00:00  30.66667 days 37.95836 33.16978
+5 2022-05-10 16:00:00 2023-12-31 16:00:00 600.00000 days 33.16978 32.11792
+  s1.c.delta s1.per.delta
+1         NA           NA
+2  -7.425381   -17.868397
+3   3.827796    11.215156
+4  -4.788582   -12.615356
+5  -1.051860    -3.171141</code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="meteorological-data-using-worldmet" class="level1">
+<h1>Meteorological Data Using WorldMet</h1>
+<p>We may need to integrate different data sets into our analysis. One useful package for doing this is <code>worldmet</code>. This package allows us to access different weather sites. In this code we identify the <code>bradford_met</code> site id and use the <code>worldmet::importNOAA()</code> function to download it.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>bradford_met <span class="ot">=</span> <span class="st">"033300-99999"</span></span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>met_data <span class="ot">=</span> worldmet<span class="sc">::</span><span class="fu">importNOAA</span>(<span class="at">code=</span>bradford_met, <span class="at">year=</span><span class="dv">2018</span><span class="sc">:</span><span class="dv">2024</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Importing NOAA Data ■■■■■                             14% |  ETA: 39s</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Importing NOAA Data ■■■■■■■■■■                        29% |  ETA: 34s</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Importing NOAA Data ■■■■■■■■■■■■■■                    43% |  ETA: 25s</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Importing NOAA Data ■■■■■■■■■■■■■■■■■■                57% |  ETA: 19s</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Importing NOAA Data ■■■■■■■■■■■■■■■■■■■■■■            71% |  ETA: 14s</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Importing NOAA Data ■■■■■■■■■■■■■■■■■■■■■■■■■■■       86% |  ETA:  6s</code></pre>
+</div>
+</div>
+<p>We can use the <code>left_join</code> function to join two data frames, <code>data</code> and <code>met_data</code> based on the content of the <code>by</code> argument. Note that the <code>worldmet</code> and <code>openair</code> packages are designed to work nicely together so do not need any modification, but if you have different data sets that do not have consistently labelled columns then you may have to do some extra steps here.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>data_merged <span class="ot">=</span> <span class="fu">left_join</span>(data, met_data, <span class="at">by=</span><span class="st">'date'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    // For code content inside modals, clipBoardJS needs to be initialized with a container option
+    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
