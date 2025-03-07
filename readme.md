@@ -9,38 +9,17 @@ Chris Rushton
 Before we start the analysis, we need to load the required libraries.
 The `AQEval` package provides functions for trend analysis and
 breakpoint detection, while `openair` offers tools to import and
-visualize air quality data.
+visualize air quality data. The `ggplot2` package will be used for
+visualisation, `dplyr` helps with data management, `lubridate` helps
+with date and time management, `worldmet` gives us access to NOAA
+meteorological data, and `glue` is a useful string management function.
 
 ``` r
 library(openair)
 library(ggplot2)
 library(AQEval)
 library(dplyr)
-```
-
-
-    Attaching package: 'dplyr'
-
-    The following objects are masked from 'package:stats':
-
-        filter, lag
-
-    The following objects are masked from 'package:base':
-
-        intersect, setdiff, setequal, union
-
-``` r
 library(lubridate)
-```
-
-
-    Attaching package: 'lubridate'
-
-    The following objects are masked from 'package:base':
-
-        date, intersect, setdiff, union
-
-``` r
 library(worldmet)
 library(glue)
 ```
@@ -233,7 +212,7 @@ end_date <- as.POSIXct("2023-09-30 00:00:00", format = "%Y-%m-%d %H:%M:%S")
 custom_plot <- quant_break_segments$plot + 
   labs(
     title = "Break Point Detection at BDMA",
-    subtitle = "Time Average = 8h, Sensitivity (h) parameter = 0.12"
+    subtitle = "Time Average = 8h, Sensitivity (h) parameter = 0.3"
   ) + 
   scale_x_datetime(
     limits = c(start_date, end_date)
@@ -284,15 +263,15 @@ bradford_met = "033300-99999"
 met_data = worldmet::importNOAA(code=bradford_met, year=2018:2024)
 ```
 
-    Importing NOAA Data ■■■■■                             14% |  ETA: 36s
+    Importing NOAA Data ■■■■■                             14% |  ETA: 39s
 
-    Importing NOAA Data ■■■■■■■■■■                        29% |  ETA: 27s
+    Importing NOAA Data ■■■■■■■■■■                        29% |  ETA: 28s
 
     Importing NOAA Data ■■■■■■■■■■■■■■                    43% |  ETA: 21s
 
-    Importing NOAA Data ■■■■■■■■■■■■■■■■■■                57% |  ETA: 16s
+    Importing NOAA Data ■■■■■■■■■■■■■■■■■■                57% |  ETA: 14s
 
-    Importing NOAA Data ■■■■■■■■■■■■■■■■■■■■■■            71% |  ETA: 11s
+    Importing NOAA Data ■■■■■■■■■■■■■■■■■■■■■■            71% |  ETA: 10s
 
     Importing NOAA Data ■■■■■■■■■■■■■■■■■■■■■■■■■■■       86% |  ETA:  5s
 
