@@ -13,9 +13,9 @@ execute:
 
 ## Package Loading
 
-Before we start the analysis, we need to load the required libraries. The `AQEval` package provides functions for trend analysis and breakpoint detection, while `openair` offers tools to import and visualize air quality data.
+Before we start the analysis, we need to load the required libraries. The `AQEval` package provides functions for trend analysis and breakpoint detection, while `openair` offers tools to import and visualize air quality data. The `ggplot2` package will be used for visualisation, `dplyr` helps with data management, `lubridate` helps with date and time management, `worldmet` gives us access to NOAA meteorological data, and `glue` is a useful string management function.
 
-```{r}
+```{r, results='hide', message=FALSE, warning=FALSE}
 library(openair)
 library(ggplot2)
 library(AQEval)
