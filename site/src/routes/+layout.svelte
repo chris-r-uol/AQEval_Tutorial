@@ -7,7 +7,6 @@
 </script>
 
 <svelte:head>
-	<link rel="icon" href="{base}/favicon.svg" />
 	<title>AQEval tutorial: finding changes in Bradford's air</title>
 	<meta
 		name="description"
