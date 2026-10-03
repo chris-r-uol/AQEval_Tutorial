@@ -1,0 +1,85 @@
+// The workspace students run the tutorial in: R with RStudio, and Python with
+// a Jupyter notebook, both with every package already installed.
+//
+// Everything is pinned, so that the whole class gets the same environment and
+// the same answers: the image fixes the R version, `cranMirror` fixes the date
+// the R packages are taken from, and python/requirements.txt fixes the Python
+// packages.
+{
+	"name": "AQEval tutorial (R and Python)",
+
+	// R 4.5 on Ubuntu 24.04, with Python 3.12 already present.
+	"image": "ghcr.io/rocker-org/devcontainer/r-ver:4.5",
+
+	"features": {
+		// Ubuntu ships Python without the module that makes virtual
+		// environments, which onCreate.sh needs.
+		"ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
+			"packages": "python3-venv"
+		},
+		"ghcr.io/rocker-org/devcontainer-features/rstudio-server:0": {},
+		"ghcr.io/rocker-org/devcontainer-features/r-packages:1": {
+			// openair, AQEval and dplyr are what the tutorial script uses, and
+			// rstudioapi lets .Rprofile open that script in RStudio. The rest
+			// are for the original walkthrough (walkthrough.qmd).
+			"packages": "openair,AQEval,dplyr,rstudioapi,ggplot2,lubridate,glue,worldmet",
+			// AQEval needs Java and worldmet needs the geospatial libraries.
+			"installSystemRequirements": true,
+			// CRAN as it stood on one day, served as ready-built packages. To
+			// update the R packages, move the date forward and rebuild.
+			"cranMirror": "https://p3m.dev/cran/__linux__/noble/2026-10-01"
+		}
+	},
+
+	"containerEnv": {
+		// Reading Defra's data files makes the library underneath aqeval warn,
+		// twice for every year downloaded, that R's date type has no Python
+		// equivalent. aqeval converts the dates itself, so the warning is
+		// noise, and a screen of red text at step 2 is a poor start.
+		"PYTHONWARNINGS": "ignore::UserWarning:rdata.conversion._conversion"
+	},
+
+	// onCreateCommand is included in a prebuild; postCreateCommand is not. The
+	// Python packages are installed here so that a Codespace started from a
+	// prebuild opens in seconds rather than installing them again.
+	"onCreateCommand": "bash .devcontainer/onCreate.sh",
+
+	// A container has no service manager to keep RStudio Server running, so it
+	// is started each time someone connects.
+	"postAttachCommand": {
+		"rstudio-start": "rserver"
+	},
+
+	"forwardPorts": [8787],
+	"portsAttributes": {
+		"8787": {
+			"label": "RStudio",
+			"onAutoForward": "notify"
+		}
+	},
+
+	"customizations": {
+		"codespaces": {
+			"openFiles": ["START_HERE.md"]
+		},
+		"vscode": {
+			"extensions": ["ms-python.python", "ms-toolsai.jupyter"],
+			"settings": {
+				// The environment onCreate.sh makes. Kept outside the repository
+				// folder so it is never mistaken for part of the tutorial.
+				"python.defaultInterpreterPath": "/home/rstudio/.venvs/aqeval/bin/python",
+				"workbench.editorAssociations": {
+					"START_HERE.md": "vscode.markdown.preview.editor"
+				},
+				"notebook.output.scrolling": true
+			}
+		}
+	},
+
+	// The break-point search holds several hundred megabytes at 8-hour
+	// resolution, more than the smallest machine can spare.
+	"hostRequirements": {
+		"cpus": 2,
+		"memory": "8gb"
+	}
+}

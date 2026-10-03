@@ -1,0 +1,21 @@
+id,source,site,pollutant,key,averaging,h
+raw01,raw,BDMA,no2,,8 hour,0.3
+raw02,raw,BDMA,no2,,day,0.3
+raw03,raw,BDMA,no2,,day,0.2
+raw04,raw,BDMA,no2,,day,0.15
+raw05,raw,BDMA,no2,,day,0.12
+raw06,raw,BDMA,no2,,7 day,0.3
+raw07,raw,BDMA,no2,,7 day,0.15
+raw08,raw,BDMA,nox,,day,0.3
+raw09,raw,BDMA,nox,,day,0.15
+raw10,raw,LED6,no2,,day,0.3
+raw11,raw,LED6,no2,,day,0.15
+raw12,raw,LED6,no2,,8 hour,0.3
+raw13,raw,LEED,no2,,day,0.2
+raw14,raw,DYAG,no2,,day,0.2
+raw15,raw,DYAG,nox,,7 day,0.15
+iso01,iso_r,BDMA,no2,BDMA_no2_ds1-dw1-bgair_temp,8 hour,0.3
+iso02,iso_r,BDMA,no2,BDMA_no2_ds1-dw1-bgair_temp,day,0.3
+iso03,iso_r,BDMA,no2,BDMA_no2_ds1-dw1-bgair_temp,day,0.15
+iso04,iso_r,BDMA,no2,BDMA_no2_ds1-dw1-bgnone,day,0.2
+iso05,iso_r,BDMA,nox,BDMA_nox_ds1-dw1-bgnone,7 day,0.15

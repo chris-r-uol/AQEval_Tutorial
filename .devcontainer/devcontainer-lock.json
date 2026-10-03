@@ -1,0 +1,19 @@
+{
+  "features": {
+    "ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
+      "version": "1.0.2",
+      "resolved": "ghcr.io/rocker-org/devcontainer-features/apt-packages@sha256:87a4d7750a596a5db034ba8508782f31aebdc2ffe955c66aaecb33d9de2ecdae",
+      "integrity": "sha256:87a4d7750a596a5db034ba8508782f31aebdc2ffe955c66aaecb33d9de2ecdae"
+    },
+    "ghcr.io/rocker-org/devcontainer-features/r-packages:1": {
+      "version": "1.1.0",
+      "resolved": "ghcr.io/rocker-org/devcontainer-features/r-packages@sha256:1a4ec64c4d2060e78e9c812bd3b3622c7e008465d566a2781c0e2b17a82592e5",
+      "integrity": "sha256:1a4ec64c4d2060e78e9c812bd3b3622c7e008465d566a2781c0e2b17a82592e5"
+    },
+    "ghcr.io/rocker-org/devcontainer-features/rstudio-server:0": {
+      "version": "0.3.1",
+      "resolved": "ghcr.io/rocker-org/devcontainer-features/rstudio-server@sha256:b4a0553087a089e1c59a57a75c357a2f4cb215eb4f180735c1b21cbd58c73028",
+      "integrity": "sha256:b4a0553087a089e1c59a57a75c357a2f4cb215eb4f180735c1b21cbd58c73028"
+    }
+  }
+}

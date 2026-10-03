@@ -1,0 +1,20 @@
+# Python packages for the tutorial notebook, pinned so that everyone in the
+# class runs the same versions. Used by the Codespace (.devcontainer).
+
+aqeval==0.7.3
+
+# What aqeval is built on. Pinned because a change in any of these can move
+# the fitted model, and with it the dates of the changes found.
+numpy==2.5.3
+pandas==3.0.6
+scipy==1.16.3
+statsmodels==0.15.0
+pygam==0.12.0
+plotly==7.1.0
+
+# For the "Look at the data" plot.
+matplotlib==3.11.2
+
+# To run the notebook and show its interactive figures.
+ipykernel==7.4.0
+nbformat==5.11.1

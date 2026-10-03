@@ -1,0 +1,364 @@
+{
+ "generated": "2026-10-02",
+ "engines": {
+  "python": "aqeval 0.7.3",
+  "r": "AQEval 0.6.11, mgcv 1.9.4, R version 4.6.1 (2026-06-24)"
+ },
+ "years": [
+  2018,
+  2025
+ ],
+ "sites": [
+  {
+   "code": "BDMA",
+   "name": "Bradford Mayo Avenue",
+   "type": "Urban Traffic",
+   "authority": "Bradford",
+   "lat": 53.771245,
+   "lon": -1.759774,
+   "insideCaz": true,
+   "kmFromBradford": 2.6,
+   "isolations": [
+    "ds0-dw0-bgnone",
+    "ds0-dw1-bgnone",
+    "ds1-dw0-bgnone",
+    "ds1-dw1-bgnone",
+    "ds0-dw0-bgair_temp",
+    "ds0-dw1-bgair_temp",
+    "ds1-dw0-bgair_temp",
+    "ds1-dw1-bgair_temp",
+    "ds0-dw0-bgleed",
+    "ds0-dw1-bgleed",
+    "ds1-dw0-bgleed",
+    "ds1-dw1-bgleed",
+    "ds0-dw0-bgdyag",
+    "ds0-dw1-bgdyag",
+    "ds1-dw0-bgdyag",
+    "ds1-dw1-bgdyag"
+   ],
+   "stats": {
+    "no2": {
+     "annual": {
+      "2018": 43.5,
+      "2019": 41.9,
+      "2020": 34.4,
+      "2021": 38.2,
+      "2022": 32.7,
+      "2023": 31.8,
+      "2024": 28.6,
+      "2025": 28.7
+     },
+     "capture": {
+      "2018": 97.0,
+      "2019": 96.0,
+      "2020": 81.0,
+      "2021": 97.0,
+      "2022": 91.0,
+      "2023": 99.0,
+      "2024": 99.0,
+      "2025": 99.0
+     },
+     "before": 32.7,
+     "after": 32.4,
+     "mean": 35.0
+    },
+    "nox": {
+     "annual": {
+      "2018": 115.1,
+      "2019": 104.4,
+      "2020": 80.1,
+      "2021": 87.3,
+      "2022": 73.9,
+      "2023": 71.4,
+      "2024": 63.9,
+      "2025": 65.3
+     },
+     "capture": {
+      "2018": 97.0,
+      "2019": 96.0,
+      "2020": 81.0,
+      "2021": 97.0,
+      "2022": 91.0,
+      "2023": 99.0,
+      "2024": 99.0,
+      "2025": 99.0
+     },
+     "before": 72.8,
+     "after": 73.0,
+     "mean": 82.7
+    }
+   }
+  },
+  {
+   "code": "LED6",
+   "name": "Leeds Headingley Kerbside",
+   "type": "Urban Traffic",
+   "authority": "Leeds",
+   "lat": 53.819972,
+   "lon": -1.576361,
+   "insideCaz": false,
+   "kmFromBradford": 12.3,
+   "isolations": [
+    "ds0-dw0-bgnone",
+    "ds0-dw1-bgnone",
+    "ds1-dw0-bgnone",
+    "ds1-dw1-bgnone",
+    "ds0-dw0-bgair_temp",
+    "ds0-dw1-bgair_temp",
+    "ds1-dw0-bgair_temp",
+    "ds1-dw1-bgair_temp",
+    "ds0-dw0-bgleed",
+    "ds0-dw1-bgleed",
+    "ds1-dw0-bgleed",
+    "ds1-dw1-bgleed",
+    "ds0-dw0-bgdyag",
+    "ds0-dw1-bgdyag",
+    "ds1-dw0-bgdyag",
+    "ds1-dw1-bgdyag"
+   ],
+   "stats": {
+    "no2": {
+     "annual": {
+      "2018": 32.8,
+      "2019": 28.4,
+      "2020": 20.3,
+      "2021": 23.2,
+      "2022": 22.2,
+      "2023": 20.6,
+      "2024": 20.1,
+      "2025": 20.2
+     },
+     "capture": {
+      "2018": 99.0,
+      "2019": 99.0,
+      "2020": 99.0,
+      "2021": 76.0,
+      "2022": 94.0,
+      "2023": 92.0,
+      "2024": 98.0,
+      "2025": 99.0
+     },
+     "before": 21.6,
+     "after": 21.5,
+     "mean": 23.5
+    },
+    "nox": {
+     "annual": {
+      "2018": 77.4,
+      "2019": 66.4,
+      "2020": 42.6,
+      "2021": 48.8,
+      "2022": 46.3,
+      "2023": 43.1,
+      "2024": 40.3,
+      "2025": 41.6
+     },
+     "capture": {
+      "2018": 99.0,
+      "2019": 99.0,
+      "2020": 99.0,
+      "2021": 76.0,
+      "2022": 94.0,
+      "2023": 92.0,
+      "2024": 98.0,
+      "2025": 99.0
+     },
+     "before": 44.8,
+     "after": 44.4,
+     "mean": 51.0
+    }
+   }
+  },
+  {
+   "code": "LEED",
+   "name": "Leeds Centre",
+   "type": "Urban Background",
+   "authority": "Leeds",
+   "lat": 53.80378,
+   "lon": -1.546472,
+   "insideCaz": false,
+   "kmFromBradford": 14.0,
+   "isolations": [
+    "ds0-dw0-bgnone",
+    "ds0-dw1-bgnone",
+    "ds1-dw0-bgnone",
+    "ds1-dw1-bgnone",
+    "ds0-dw0-bgair_temp",
+    "ds0-dw1-bgair_temp",
+    "ds1-dw0-bgair_temp",
+    "ds1-dw1-bgair_temp",
+    "ds0-dw0-bgdyag",
+    "ds0-dw1-bgdyag",
+    "ds1-dw0-bgdyag",
+    "ds1-dw1-bgdyag"
+   ],
+   "stats": {
+    "no2": {
+     "annual": {
+      "2018": 29.7,
+      "2019": 28.3,
+      "2020": 20.8,
+      "2021": 22.0,
+      "2022": 22.2,
+      "2023": 19.1,
+      "2024": 19.2,
+      "2025": 18.6
+     },
+     "capture": {
+      "2018": 98.0,
+      "2019": 99.0,
+      "2020": 97.0,
+      "2021": 96.0,
+      "2022": 98.0,
+      "2023": 96.0,
+      "2024": 94.0,
+      "2025": 99.0
+     },
+     "before": 22.1,
+     "after": 20.2,
+     "mean": 22.5
+    },
+    "nox": {
+     "annual": {
+      "2018": 49.9,
+      "2019": 46.4,
+      "2020": 30.8,
+      "2021": 31.7,
+      "2022": 32.0,
+      "2023": 26.8,
+      "2024": 27.1,
+      "2025": 26.0
+     },
+     "capture": {
+      "2018": 98.0,
+      "2019": 99.0,
+      "2020": 97.0,
+      "2021": 96.0,
+      "2022": 98.0,
+      "2023": 96.0,
+      "2024": 94.0,
+      "2025": 99.0
+     },
+     "before": 32.2,
+     "after": 28.4,
+     "mean": 33.9
+    }
+   }
+  },
+  {
+   "code": "DYAG",
+   "name": "Dewsbury Ashworth Grange",
+   "type": "Urban Background",
+   "authority": "Kirklees",
+   "lat": 53.693104,
+   "lon": -1.637111,
+   "insideCaz": false,
+   "kmFromBradford": 13.9,
+   "isolations": [
+    "ds0-dw0-bgnone",
+    "ds0-dw1-bgnone",
+    "ds1-dw0-bgnone",
+    "ds1-dw1-bgnone",
+    "ds0-dw0-bgair_temp",
+    "ds0-dw1-bgair_temp",
+    "ds1-dw0-bgair_temp",
+    "ds1-dw1-bgair_temp",
+    "ds0-dw0-bgleed",
+    "ds0-dw1-bgleed",
+    "ds1-dw0-bgleed",
+    "ds1-dw1-bgleed"
+   ],
+   "stats": {
+    "no2": {
+     "annual": {
+      "2018": 27.2,
+      "2019": 29.5,
+      "2020": 15.7,
+      "2021": 17.1,
+      "2022": 17.8,
+      "2023": 16.0,
+      "2024": 15.4,
+      "2025": 16.6
+     },
+     "capture": {
+      "2018": 42.0,
+      "2019": 19.0,
+      "2020": 89.0,
+      "2021": 92.0,
+      "2022": 98.0,
+      "2023": 90.0,
+      "2024": 87.0,
+      "2025": 89.0
+     },
+     "before": 17.0,
+     "after": 17.1,
+     "mean": 17.4
+    },
+    "nox": {
+     "annual": {
+      "2018": 54.7,
+      "2019": 54.3,
+      "2020": 24.5,
+      "2021": 26.1,
+      "2022": 27.7,
+      "2023": 26.6,
+      "2024": 23.4,
+      "2025": 26.1
+     },
+     "capture": {
+      "2018": 42.0,
+      "2019": 19.0,
+      "2020": 89.0,
+      "2021": 92.0,
+      "2022": 98.0,
+      "2023": 90.0,
+      "2024": 87.0,
+      "2025": 89.0
+     },
+     "before": 26.2,
+     "after": 27.5,
+     "mean": 28.2
+    }
+   }
+  }
+ ],
+ "pollutants": [
+  "no2",
+  "nox"
+ ],
+ "controlSites": [
+  "LEED",
+  "DYAG"
+ ],
+ "averaging": [
+  "8 hour",
+  "day",
+  "7 day"
+ ],
+ "h": [
+  0.12,
+  0.15,
+  0.2,
+  0.3,
+  0.5
+ ],
+ "maxBreaksToQuantify": 4,
+ "events": [
+  {
+   "id": "lockdown",
+   "date": "2020-03-23",
+   "label": "First COVID-19 lockdown",
+   "short": "Lockdown"
+  },
+  {
+   "id": "caz",
+   "date": "2022-09-26",
+   "label": "Bradford Clean Air Zone starts",
+   "short": "Clean Air Zone"
+  }
+ ],
+ "centre": [
+  53.795,
+  -1.7594
+ ]
+}

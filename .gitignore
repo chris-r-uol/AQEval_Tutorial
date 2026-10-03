@@ -1,4 +1,20 @@
+# R
 .Rproj.user
 .Rhistory
 .RData
 .Ruserdata
+Rplots.pdf
+
+# Python
+.venv/
+__pycache__/
+.ipynb_checkpoints/
+
+# The pipeline's working files. The results it produces are committed, under
+# site/static/data; these are the downloads and intermediate fits behind them.
+pipeline/cache/
+
+# Editor and assistant settings that hold paths on one person's machine
+.claude/
+
+.DS_Store

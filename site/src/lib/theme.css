@@ -1,0 +1,257 @@
+/**
+ * Design tokens and base styles.
+ *
+ * The palette follows the GOV.UK Design System, the visual language of the
+ * air quality dashboards this tutorial sits alongside.
+ */
+
+:root {
+	--colour-brand: #1d70b8;
+	--colour-brand-dark: #003078;
+	--colour-brand-light: #d2e2f1;
+
+	--surface: #ffffff;
+	--surface-sunken: #f3f2f1;
+	--surface-code: #f8f8f8;
+
+	--border: #b1b4b6;
+	--border-subtle: #e5e5e5;
+
+	--text: #0b0c0c;
+	--text-muted: #505a5f;
+	--text-inverse: #ffffff;
+
+	/* AQEval's own plot colours: red trend, blue breaks. */
+	--colour-trend: #d4351c;
+	--colour-break: #1d52b8;
+
+	--colour-fall: #00703c;
+	--colour-fall-tint: #d7efe3;
+	--colour-rise: #d4351c;
+	--colour-rise-tint: #f9dedb;
+
+	--colour-traffic: #912b88;
+	--colour-background: #28a197;
+
+	/* A value in the code that a dial controls. */
+	--dial: #fff2b3;
+	--dial-strong: #ffdd00;
+
+	--focus: #ffdd00;
+
+	--space-1: 0.25rem;
+	--space-2: 0.5rem;
+	--space-3: 0.75rem;
+	--space-4: 1rem;
+	--space-5: 1.5rem;
+	--space-6: 2rem;
+
+	--radius: 4px;
+	--radius-lg: 8px;
+
+	--shadow-raised: 0 1px 3px rgba(11, 12, 12, 0.12);
+
+	--font: arial, helvetica, sans-serif;
+	--font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+	--header-height: 56px;
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+html {
+	scroll-behavior: smooth;
+	scroll-padding-top: calc(var(--header-height) + var(--space-4));
+}
+
+body {
+	margin: 0;
+	font-family: var(--font);
+	color: var(--text);
+	background: var(--surface-sunken);
+	font-size: 1rem;
+	line-height: 1.5;
+	-webkit-font-smoothing: antialiased;
+}
+
+/* A visible, high-contrast focus ring. */
+:focus-visible {
+	outline: 3px solid var(--focus);
+	outline-offset: 0;
+	box-shadow: 0 2px 0 2px var(--text);
+}
+
+button,
+select,
+input {
+	font: inherit;
+}
+
+button {
+	cursor: pointer;
+}
+
+h1,
+h2,
+h3,
+h4 {
+	margin: 0;
+	line-height: 1.2;
+	font-weight: 700;
+}
+
+p {
+	margin: 0 0 var(--space-3);
+}
+
+a {
+	color: var(--colour-brand);
+}
+
+a:hover {
+	color: var(--colour-brand-dark);
+}
+
+code {
+	font-family: var(--font-mono);
+	font-size: 0.875em;
+	background: var(--surface-sunken);
+	padding: 1px 4px;
+	border-radius: 3px;
+}
+
+/* --- Shared components ---------------------------------------------------- */
+
+.card {
+	min-width: 0;
+	background: var(--surface);
+	border-radius: var(--radius-lg);
+	box-shadow: var(--shadow-raised);
+	padding: var(--space-4);
+}
+
+.card__title {
+	font-size: 1rem;
+	margin-bottom: var(--space-2);
+}
+
+.muted {
+	color: var(--text-muted);
+	font-size: 0.875rem;
+}
+
+.btn {
+	white-space: nowrap;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-2);
+	padding: var(--space-2) var(--space-4);
+	border: 2px solid transparent;
+	border-radius: var(--radius);
+	background: var(--colour-brand);
+	color: var(--text-inverse);
+	font-weight: 600;
+	text-decoration: none;
+	transition: background 0.12s ease;
+}
+
+.btn:hover:not(:disabled) {
+	background: var(--colour-brand-dark);
+	color: var(--text-inverse);
+}
+
+.btn:disabled {
+	opacity: 0.55;
+	cursor: not-allowed;
+}
+
+.btn--secondary {
+	background: var(--surface);
+	color: var(--text);
+	border-color: var(--border);
+}
+
+.btn--secondary:hover:not(:disabled) {
+	background: var(--surface-sunken);
+	color: var(--text);
+}
+
+.btn--small {
+	padding: 2px var(--space-3);
+	font-size: 0.875rem;
+}
+
+.chip {
+	display: inline-block;
+	padding: 1px var(--space-2);
+	border-radius: 999px;
+	background: var(--surface-sunken);
+	color: var(--text-muted);
+	font-size: 0.75rem;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.alert {
+	padding: var(--space-3) var(--space-4);
+	border-left: 5px solid var(--colour-brand);
+	background: var(--colour-brand-light);
+	border-radius: 0 var(--radius) var(--radius) 0;
+	font-size: 0.9375rem;
+}
+
+.alert--error {
+	border-left-color: var(--colour-rise);
+	background: var(--colour-rise-tint);
+}
+
+.alert p:last-child {
+	margin-bottom: 0;
+}
+
+/* Visible only to screen readers. */
+.visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+@keyframes skeleton-pulse {
+	0%,
+	100% {
+		opacity: 0.55;
+	}
+	50% {
+		opacity: 0.9;
+	}
+}
+
+.skeleton {
+	background: var(--surface-sunken);
+	border-radius: var(--radius);
+	animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	html {
+		scroll-behavior: auto;
+	}
+	.skeleton {
+		animation: none;
+	}
+	* {
+		transition-duration: 0.01ms !important;
+		animation-duration: 0.01ms !important;
+	}
+}

@@ -2,6 +2,8 @@
 Chris Rushton
 2025-03-05
 
+> There is now an [interactive version of this tutorial](https://chris-r-uol.github.io/AQEval_Tutorial/), and a ready-made workspace for running the code in R or in Python. See the [README](README.md).
+
 # Setup
 
 ## Package Loading
@@ -101,7 +103,7 @@ understanding the overall trends and variability in the data.
 time_plot = openair::timePlot(data, pollutant="no2")
 ```
 
-![](readme_files/figure-commonmark/unnamed-chunk-4-1.png)
+![](walkthrough_files/figure-commonmark/unnamed-chunk-4-1.png)
 
 # De-Weathering and De-Seasoning
 
@@ -130,7 +132,7 @@ We can now plot a time series again to see the difference.
 time_plot_dwds = timePlot(data, pollutant="deweatherdeseason")
 ```
 
-![](readme_files/figure-commonmark/unnamed-chunk-7-1.png)
+![](walkthrough_files/figure-commonmark/unnamed-chunk-7-1.png)
 
 # Further Processing
 
@@ -196,7 +198,7 @@ quant_break_segments = AQEval::quantBreakSegments(data_8h, "deweatherdeseason", 
     Warning: Removed 22 rows containing missing values or values outside the scale range
     (`geom_path()`).
 
-![](readme_files/figure-commonmark/unnamed-chunk-10-1.png)
+![](walkthrough_files/figure-commonmark/unnamed-chunk-10-1.png)
 
 ## Visualising the Break Points
 
@@ -224,7 +226,7 @@ custom_plot
     Warning: Removed 301 rows containing missing values or values outside the scale range
     (`geom_path()`).
 
-![](readme_files/figure-commonmark/unnamed-chunk-11-1.png)
+![](walkthrough_files/figure-commonmark/unnamed-chunk-11-1.png)
 
 ## View The Report
 
