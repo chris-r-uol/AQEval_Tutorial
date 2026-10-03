@@ -1,12 +1,21 @@
-# Build the interactive tutorial and publish it to GitHub Pages.
+# Build the interactive tutorial, and publish it to GitHub Pages.
+#
+# A pull request is built and checked but not published, so a change that
+# would break the site shows up before it is merged. Pushes to main publish.
 #
 # One-off set-up: in the repository's Settings > Pages, set the source to
 # "GitHub Actions".
-name: Publish the tutorial site
+name: Build and publish the tutorial site
 
 on:
   push:
     branches: [main]
+    paths:
+      - "site/**"
+      - "R/**"
+      - "python/**"
+      - ".github/workflows/pages.yml"
+  pull_request:
     paths:
       - "site/**"
       - "R/**"
@@ -17,14 +26,13 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
-# One deployment at a time; a newer push waits rather than cancelling a
-# deployment part-way through.
+# One deployment at a time, and a newer push waits rather than cancelling a
+# deployment part-way through. Pull requests build in a group of their own,
+# where a new commit does replace the build still running for the last one.
 concurrency:
-  group: pages
-  cancel-in-progress: false
+  group: ${{ github.event_name == 'pull_request' && format('pages-pr-{0}', github.ref) || 'pages' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
@@ -57,13 +65,18 @@ jobs:
           # A project site is served from /<repository>/, not from the root.
           BASE_PATH: /${{ github.event.repository.name }}
 
-      - uses: actions/upload-pages-artifact@v5
+      - if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v5
         with:
           path: site/build
 
   deploy:
+    if: github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
