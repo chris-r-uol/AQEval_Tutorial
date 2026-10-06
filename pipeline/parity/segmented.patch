@@ -1,0 +1,76 @@
+--- a/aqeval/_segmented.py
++++ b/aqeval/_segmented.py
+@@ -51,6 +51,15 @@
+     return coef, fitted, resid, float(np.sum(resid**2))
+ 
+ 
++def _rss_any_rank(X: np.ndarray, y: np.ndarray) -> float:
++    """Residual sum of squares of the least-squares fit, whatever the rank of
++    X -- what R gets from lm.wfit, which fits a rank-deficient design on the
++    columns it can estimate rather than failing."""
++    coef, _, _, _ = np.linalg.lstsq(X, y, rcond=None)
++    resid = y - X @ coef
++    return float(resid @ resid)
++
++
+ def _far_psi(z: np.ndarray, psi: np.ndarray, fc: float = 0.95):
+     """Port of segmented's ``far.psi`` for a single segmented variable.
+ 
+@@ -211,12 +220,7 @@
+         psi_old = psi.copy()
+         psi = psi_old + gamma_c / beta_c
+         U1 = U_at(psi)
+-        try:
+-            obj1 = _lstsq_fit(np.column_stack((XREG, U1)), y)
+-            L1 = obj1[3]
+-        except SegmentedError:
+-            obj1 = None
+-            L1 = L0 + 10
++        L1 = _rss_any_rank(np.column_stack((XREG, U1)), y)
+ 
+         k_h = use_k = 1
+         while L1 > L0:
+@@ -224,16 +228,9 @@
+             use_k = 2 ** (k_h - 1)
+             psi = psi_old + (gamma_c / beta_c) / (use_k * h)
+             U1 = U_at(psi)
+-            try:
+-                obj1 = _lstsq_fit(np.column_stack((XREG, U1)), y)
+-                L1 = obj1[3]
+-            except SegmentedError:
+-                obj1 = None
+-                L1 = L0 + 10
++            L1 = _rss_any_rank(np.column_stack((XREG, U1)), y)
+             if 1.0 / (use_k * h) < min_step:
+                 break
+-        if obj1 is None:
+-            raise SegmentedError("segmented fit failed during step halving")
+ 
+         epsilon = (L0 - L1) / (abs(L0) + 0.1)
+         L0 = L1
+@@ -255,9 +252,11 @@
+         V = -(z[:, None] > psi[None, :]).astype(float)
+         obj = _lstsq_fit(np.column_stack((XREG, U)), y)
+     else:
+-        # common single-iteration path: keep obj1's fit; note V remains
+-        # the one computed at the *pre-update* psi, exactly as in R
+-        obj = obj1
++        # common single-iteration path: the fit at the updated psi; note V
++        # remains the one computed at the *pre-update* psi, exactly as in R.
++        # A rank-deficient fit here has NA coefficients in R, which kills the
++        # candidate, so this one must be full rank.
++        obj = _lstsq_fit(np.column_stack((XREG, U)), y)
+         V = V_loop
+ 
+     coefs_nogap, fitted, resid, rss_nogap = obj
+@@ -269,6 +268,10 @@
+     df_residual = n - p
+     if df_residual <= 0:
+         raise SegmentedError("no residual degrees of freedom")
++    if np.linalg.matrix_rank(Xf) < Xf.shape[1]:
++        raise SegmentedError(
++            "at least one coef is NA: breakpoint(s) at the boundary?"
++        )
+     XtX = Xf.T @ Xf
+     try:
+         XtX_inv = np.linalg.inv(XtX)

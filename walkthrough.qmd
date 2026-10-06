@@ -9,6 +9,8 @@ execute:
   echo: true
 ---
 
+> There is now an [interactive version of this tutorial](https://chris-r-uol.github.io/AQEval_Tutorial/), and a ready-made workspace for running the code in R or in Python. See the [README](README.md).
+
 # Setup
 
 ## Package Loading
