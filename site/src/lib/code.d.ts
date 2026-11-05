@@ -1,5 +1,7 @@
 export type Language = 'r' | 'python';
 
+export type Stage = 'data' | 'average' | 'isolate' | 'breaks' | 'changes';
+
 export interface Settings {
 	site: string;
 	pollutant: string;
@@ -23,5 +25,7 @@ export function plain(code: string): string;
 export function segments(code: string): Array<{ text: string; dial: keyof Settings | null }>;
 export function isolates(settings: Settings): boolean;
 export function usesControlSite(settings: Settings): boolean;
-export function steps(settings: Settings, language: Language): Step[];
-export function script(settings: Settings, language: Language): string;
+export const STAGES: Stage[];
+export function reached(current: Stage, stage: Stage): boolean;
+export function steps(settings: Settings, language: Language, stage?: Stage): Step[];
+export function script(settings: Settings, language: Language, stage?: Stage): string;

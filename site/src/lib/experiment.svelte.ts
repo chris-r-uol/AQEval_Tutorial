@@ -1,31 +1,59 @@
 /**
- * The state of the experiment: where every dial is set.
+ * The state of the experiment: where every dial is set, and how far into the
+ * analysis the reader has gone.
  *
  * Kept in one place because the controls, the map, the figure, the report and
  * the code panel all read the same settings. The settings are mirrored into
  * the page address, so a link reproduces an exact set-up — useful for a
  * lecturer pointing a class at one result.
  */
-import { DEFAULTS, type Language, type Settings } from './code';
+import { DEFAULTS, STAGES, reached, type Language, type Settings, type Stage } from './code';
 
 const AVERAGING_CODE: Record<string, string> = { '8 hour': '8h', day: 'day', '7 day': 'week' };
+
+/** Where a reader lands: the measurements, with no analysis yet. */
+const FIRST_STAGE: Stage = 'data';
+
+const NO_ISOLATION = { deseason: false, deweather: false, background: null } as const;
 
 class Experiment {
 	settings = $state<Settings>({ ...DEFAULTS });
 	language = $state<Language>('r');
+	stage = $state<Stage>(FIRST_STAGE);
 
 	/** Change one or more dials. */
 	set(change: Partial<Settings>) {
 		this.settings = { ...this.settings, ...change };
 	}
 
+	/** Go to a stage: forward to add a step, back to take steps away. */
+	goTo(stage: Stage) {
+		this.stage = stage;
+	}
+
+	/** The stage after this one, or null at the last. */
+	get nextStage(): Stage | null {
+		return STAGES[STAGES.indexOf(this.stage) + 1] ?? null;
+	}
+
+	/**
+	 * The settings that actually apply at this stage. Before the isolation
+	 * step is added the series is analysed as measured, whatever the isolation
+	 * dials are set to, so that adding the step brings the dials into play.
+	 */
+	get effective(): Settings {
+		return reached(this.stage, 'isolate') ? this.settings : { ...this.settings, ...NO_ISOLATION };
+	}
+
 	reset() {
 		this.settings = { ...DEFAULTS };
+		this.stage = FIRST_STAGE;
 	}
 
 	get isDefault() {
-		return (Object.keys(DEFAULTS) as Array<keyof Settings>).every(
-			(key) => this.settings[key] === DEFAULTS[key]
+		return (
+			this.stage === FIRST_STAGE &&
+			(Object.keys(DEFAULTS) as Array<keyof Settings>).every((key) => this.settings[key] === DEFAULTS[key])
 		);
 	}
 
@@ -40,6 +68,7 @@ class Experiment {
 			background: s.background ?? 'none',
 			average: AVERAGING_CODE[s.averaging] ?? s.averaging,
 			h: String(s.h),
+			stage: this.stage,
 			language: this.language
 		});
 		return `#${params}`;
@@ -89,6 +118,13 @@ class Experiment {
 		this.settings = next;
 		const language = params.get('language');
 		if (language === 'r' || language === 'python') this.language = language;
+
+		// Links made before the site had stages show the whole analysis, which
+		// is what they showed then. A link with no settings at all starts at
+		// the beginning.
+		const stage = params.get('stage') as Stage | null;
+		if (stage && STAGES.includes(stage)) this.stage = stage;
+		else this.stage = params.has('site') ? 'changes' : FIRST_STAGE;
 	}
 }
 

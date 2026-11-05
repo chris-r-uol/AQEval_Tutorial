@@ -1,10 +1,12 @@
 <script lang="ts">
 	/**
-	 * The dials. Each group is one step of the analysis, in the order the code
-	 * runs them, so setting up the experiment reads top to bottom like the
-	 * script it produces.
+	 * The dials. Each group is one step of the analysis, in the order a reader
+	 * adds them. The first two choose the data; the rest are steps of the
+	 * analysis, and a step's dials appear once the step is added.
 	 */
+	import { STAGES, reached, type Stage } from '$lib/code';
 	import { experiment } from '$lib/experiment.svelte';
+	import { STAGE_ACTION, STAGE_TEASER } from '$lib/stages';
 	import { AVERAGING_LABEL, POLLUTANT_LABEL, POLLUTANT_NAME, formatDuration } from '$lib/format';
 	import { SITE_COLOURS } from '$lib/charts';
 	import type { Manifest } from '$lib/types';
@@ -40,10 +42,25 @@
 	// The slider moves through the precomputed values of h by position.
 	let hIndex = $derived(manifest.h.indexOf(settings.h));
 	let spanDays = $derived((manifest.years[1] - manifest.years[0] + 1) * 365.25);
+
+	let stage = $derived(experiment.stage);
+	let next = $derived(experiment.nextStage);
+	/** The number of the step in this list that adds a stage. */
+	const number = (s: Stage) => STAGES.indexOf(s) + 2;
 </script>
+
+{#snippet locked(s: Stage)}
+	{#if s === next}
+		<p class="locked__teaser">{STAGE_TEASER[s]}</p>
+		<button class="btn btn--small" onclick={() => experiment.goTo(s)}>Add this step</button>
+	{:else}
+		<p class="locked__teaser muted">{STAGE_TEASER[s]} Comes after step {number(s) - 1}.</p>
+	{/if}
+{/snippet}
 
 <div class="controls">
 	<h2 class="controls__title">Set up the experiment</h2>
+	<p class="muted controls__lede">Choose the data, then add the analysis one step at a time.</p>
 
 	<ol class="steps">
 		<li class="step">
@@ -103,127 +120,181 @@
 			</Help>
 		</li>
 
-		<li class="step">
-			<h3><span class="step__number">3</span> Isolate the signal</h3>
-			<label class="check">
-				<input
-					type="checkbox"
-					checked={settings.deseason}
-					onchange={(event) => experiment.set({ deseason: event.currentTarget.checked })}
+		<li class="step" class:step--locked={!reached(stage, 'average')}>
+			<h3><span class="step__number">3</span> Average the data</h3>
+			{#if reached(stage, 'average')}
+				<Segmented
+					legend="Averaging period"
+					hideLegend
+					name="averaging"
+					options={manifest.averaging.map((value) => ({ value, label: AVERAGING_LABEL[value] }))}
+					value={settings.averaging}
+					onChange={(value) => experiment.set({ averaging: value })}
 				/>
-				Remove the daily and yearly cycle
-			</label>
-			<label class="check">
-				<input
-					type="checkbox"
-					checked={settings.deweather}
-					onchange={(event) => experiment.set({ deweather: event.currentTarget.checked })}
-				/>
-				Remove the effect of the wind
-			</label>
-			<label class="select">
-				<span>Also account for</span>
-				<select
-					value={settings.background ?? 'none'}
-					onchange={(event) => {
-						const value = event.currentTarget.value;
-						experiment.set({ background: value === 'none' ? null : value });
-					}}
-				>
-					{#each backgroundOptions as option (option.value)}
-						<option value={option.value}>{option.label}</option>
+				<Help>
+					<p>
+						The data arrives as one value an hour. Averaging into longer blocks smooths out short-lived
+						spikes. Shorter blocks keep more detail and can date a change more exactly, but are noisier and
+						slower to analyse.
+					</p>
+				</Help>
+			{:else}
+				{@render locked('average')}
+			{/if}
+		</li>
+
+		<li class="step" class:step--locked={!reached(stage, 'isolate')}>
+			<h3><span class="step__number">4</span> Isolate the signal</h3>
+			{#if reached(stage, 'isolate')}
+				<label class="check">
+					<input
+						type="checkbox"
+						checked={settings.deseason}
+						onchange={(event) => experiment.set({ deseason: event.currentTarget.checked })}
+					/>
+					Remove the daily and yearly cycle
+				</label>
+				<label class="check">
+					<input
+						type="checkbox"
+						checked={settings.deweather}
+						onchange={(event) => experiment.set({ deweather: event.currentTarget.checked })}
+					/>
+					Remove the effect of the wind
+				</label>
+				<label class="select">
+					<span>Also account for</span>
+					<select
+						value={settings.background ?? 'none'}
+						onchange={(event) => {
+							const value = event.currentTarget.value;
+							experiment.set({ background: value === 'none' ? null : value });
+						}}
+					>
+						{#each backgroundOptions as option (option.value)}
+							<option value={option.value}>{option.label}</option>
+						{/each}
+					</select>
+				</label>
+				<Help>
+					<p>
+						Pollution is higher at rush hour, in winter and on still days. None of that is a change in
+						emissions. AQEval fits a model of those patterns and subtracts it, so what is left is the part
+						a policy could have caused.
+					</p>
+					<p>
+						<strong>Also account for</strong> adds one more thing to the model. Choosing a background site
+						removes whatever the two sites have in common, such as region-wide changes, and leaves what is
+						particular to this site.
+					</p>
+					<p>Untick everything to analyse the measurements as they are.</p>
+					<p>
+						In the code this step comes before the averaging: the model is fitted to the hourly
+						measurements, and the isolated signal is then averaged.
+					</p>
+				</Help>
+			{:else}
+				{@render locked('isolate')}
+			{/if}
+		</li>
+
+		<li class="step" class:step--locked={!reached(stage, 'breaks')}>
+			<h3><span class="step__number">5</span> Find the break points</h3>
+			{#if reached(stage, 'breaks')}
+				<label class="slider">
+					<span class="slider__label">
+						<code>h = {settings.h}</code>
+						<span class="muted">breaks at least {formatDuration(settings.h * spanDays)} apart</span>
+					</span>
+					<input
+						type="range"
+						min="0"
+						max={manifest.h.length - 1}
+						step="1"
+						value={hIndex}
+						list="h-values"
+						aria-valuetext={`h = ${settings.h}`}
+						oninput={(event) => experiment.set({ h: manifest.h[Number(event.currentTarget.value)] })}
+					/>
+					<span class="slider__ends" aria-hidden="true">
+						<span>More sensitive</span>
+						<span>Less sensitive</span>
+					</span>
+				</label>
+				<datalist id="h-values">
+					{#each manifest.h as _, index (index)}
+						<option value={index}></option>
 					{/each}
-				</select>
-			</label>
-			<Help>
-				<p>
-					Pollution is higher at rush hour, in winter and on still days. None of that is a change in
-					emissions. AQEval fits a model of those patterns and subtracts it, so what is left is the part
-					a policy could have caused.
-				</p>
-				<p>
-					<strong>Also account for</strong> adds one more thing to the model. Choosing a background site
-					removes whatever the two sites have in common, such as region-wide changes, and leaves what is
-					particular to this site.
-				</p>
-				<p>Untick everything to analyse the measurements as they are.</p>
-			</Help>
+				</datalist>
+				<Help>
+					<p>
+						<code>h</code> is the shortest stretch allowed between two breaks, as a fraction of the whole
+						series. With {manifest.years[1] - manifest.years[0] + 1} years of data, <code>h = 0.3</code>
+						means no two breaks closer than about {formatDuration(0.3 * spanDays)}.
+					</p>
+					<p>
+						A smaller <code>h</code> is more sensitive: it can find more changes, closer together. It can also
+						split one real change into several, and it takes much longer to run.
+					</p>
+					<p>
+						The dial starts at 0.3, a quick first look. For 8-hour data we would normally use
+						<code>h = 0.12</code>, the most sensitive setting here. Work down towards it and watch what
+						appears.
+					</p>
+				</Help>
+			{:else}
+				{@render locked('breaks')}
+			{/if}
 		</li>
 
-		<li class="step">
-			<h3><span class="step__number">4</span> Average the data</h3>
-			<Segmented
-				legend="Averaging period"
-				hideLegend
-				name="averaging"
-				options={manifest.averaging.map((value) => ({ value, label: AVERAGING_LABEL[value] }))}
-				value={settings.averaging}
-				onChange={(value) => experiment.set({ averaging: value })}
-			/>
-			<Help>
-				<p>
-					The data arrives as one value an hour. Averaging into longer blocks smooths out short-lived
-					spikes. Shorter blocks keep more detail and can date a change more exactly, but are noisier and
-					slower to analyse.
+		<li class="step" class:step--locked={!reached(stage, 'changes')}>
+			<h3><span class="step__number">6</span> Measure the changes</h3>
+			{#if reached(stage, 'changes')}
+				<p class="step__done">
+					AQEval fits a trend in straight stretches, starting from the break points, and reports the size
+					and pace of each change. There is nothing to set: the findings are under the figure.
 				</p>
-			</Help>
-		</li>
-
-		<li class="step">
-			<h3><span class="step__number">5</span> Set the sensitivity</h3>
-			<label class="slider">
-				<span class="slider__label">
-					<code>h = {settings.h}</code>
-					<span class="muted">breaks at least {formatDuration(settings.h * spanDays)} apart</span>
-				</span>
-				<input
-					type="range"
-					min="0"
-					max={manifest.h.length - 1}
-					step="1"
-					value={hIndex}
-					list="h-values"
-					aria-valuetext={`h = ${settings.h}`}
-					oninput={(event) => experiment.set({ h: manifest.h[Number(event.currentTarget.value)] })}
-				/>
-				<span class="slider__ends" aria-hidden="true">
-					<span>More sensitive</span>
-					<span>Less sensitive</span>
-				</span>
-			</label>
-			<datalist id="h-values">
-				{#each manifest.h as _, index (index)}
-					<option value={index}></option>
-				{/each}
-			</datalist>
-			<Help>
-				<p>
-					<code>h</code> is the shortest stretch allowed between two breaks, as a fraction of the whole
-					series. With {manifest.years[1] - manifest.years[0] + 1} years of data, <code>h = 0.3</code>
-					means no two breaks closer than about {formatDuration(0.3 * spanDays)}.
-				</p>
-				<p>
-					A smaller <code>h</code> is more sensitive: it can find more changes, closer together. It can also
-					split one real change into several, and it takes much longer to run.
-				</p>
-				<p>
-					The dial starts at 0.3, a quick first look. For 8-hour data we would normally use
-					<code>h = 0.12</code>, the most sensitive setting here. Work down towards it and watch what
-					appears.
-				</p>
-			</Help>
+			{:else}
+				{@render locked('changes')}
+			{/if}
 		</li>
 	</ol>
 
 	<button class="btn btn--secondary" onclick={() => experiment.reset()} disabled={experiment.isDefault}>
-		Reset to the starting set-up
+		Start again
 	</button>
 </div>
 
 <style>
 	.controls__title {
 		font-size: 1.125rem;
-		margin-bottom: var(--space-3);
+		margin-bottom: var(--space-1);
+	}
+
+	.controls__lede {
+		margin: 0 0 var(--space-3);
+		font-size: 0.875rem;
+	}
+
+	/* A step not yet added: its number is hollow, and its dials wait. */
+	.step--locked .step__number {
+		background: var(--surface);
+		color: var(--text-muted);
+		box-shadow: inset 0 0 0 2px var(--border);
+	}
+
+	.step--locked h3 {
+		color: var(--text-muted);
+	}
+
+	.locked__teaser {
+		margin: 0 0 var(--space-2);
+		font-size: 0.875rem;
+	}
+
+	.step__done {
+		margin: 0;
+		font-size: 0.875rem;
 	}
 
 	.steps {

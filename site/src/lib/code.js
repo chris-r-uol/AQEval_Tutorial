@@ -14,6 +14,13 @@
 /** @typedef {'r' | 'python'} Language */
 
 /**
+ * How far into the analysis the reader has gone. The website starts at the
+ * measurements alone and adds a step at a time; the R script and the notebook
+ * are the whole analysis, the last stage.
+ * @typedef {'data' | 'average' | 'isolate' | 'breaks' | 'changes'} Stage
+ */
+
+/**
  * @typedef {object} Settings
  * @property {string} site        AURN site code, e.g. "BDMA"
  * @property {string} pollutant   "no2" or "nox"
@@ -52,6 +59,20 @@ export const DEFAULTS = {
 	averaging: '8 hour',
 	h: 0.3
 };
+
+/**
+ * The stages in the order the website adds them. Averaging comes before
+ * isolation here, unlike in the code: the website holds the isolated signal
+ * only as averages, and smoothing first lets each step visibly change the
+ * figure. The code panel still shows isolation running first, as it must.
+ * @type {Stage[]}
+ */
+export const STAGES = ['data', 'average', 'isolate', 'breaks', 'changes'];
+
+/** Whether the reader has reached `stage` when standing at `current`. */
+export function reached(/** @type {Stage} */ current, /** @type {Stage} */ stage) {
+	return STAGES.indexOf(current) >= STAGES.indexOf(stage);
+}
 
 // Private-use characters, so a marker can never collide with real code.
 const OPEN = '';
@@ -101,17 +122,19 @@ const bool = {
 };
 
 /**
- * The tutorial as a list of steps, for one language and one set of dials.
+ * The tutorial as a list of steps, for one language and one set of dials,
+ * up to the stage the reader has reached.
  * @param {Settings} settings
  * @param {Language} language
+ * @param {Stage} [stage] defaults to the whole analysis
  * @returns {Step[]}
  */
-export function steps(settings, language) {
+export function steps(settings, language, stage = 'changes') {
 	const r = language === 'r';
 	const site = dial('site', `"${settings.site.toLowerCase()}"`);
 	const pollutant = dial('pollutant', `"${settings.pollutant}"`);
-	const control = usesControlSite(settings);
-	const isolating = isolates(settings);
+	const isolating = reached(stage, 'isolate') && isolates(settings);
+	const control = isolating && usesControlSite(settings);
 	// The column the break analysis runs on.
 	const target = isolating ? '"isolated"' : pollutant;
 	const [first, last] = YEARS;
@@ -191,6 +214,8 @@ export function steps(settings, language) {
 		});
 	}
 
+	if (!reached(stage, 'average')) return list;
+
 	const averaging = dial('averaging', `"${settings.averaging}"`);
 	list.push({
 		id: 'average',
@@ -202,6 +227,8 @@ export function steps(settings, language) {
 			? `data_avg <- timeAverage(data, avg.time = ${averaging})`
 			: `data_avg = aqeval.time_average(data, ${averaging})`
 	});
+
+	if (!reached(stage, 'breaks')) return list;
 
 	const h = dial('h', String(settings.h));
 	list.push({
@@ -215,6 +242,8 @@ export function steps(settings, language) {
 			? `breaks <- findBreakPoints(data_avg, ${target}, h = ${h})\nbreaks`
 			: `breaks = aqeval.find_break_points(\n    data_avg, ${target}, h=${h}\n)\nbreaks`
 	});
+
+	if (!reached(stage, 'changes')) return list;
 
 	list.push({
 		id: 'quantify',
@@ -230,12 +259,13 @@ export function steps(settings, language) {
 }
 
 /**
- * The whole tutorial as one script, with a comment heading each step.
+ * The tutorial as one script, with a comment heading each step.
  * @param {Settings} settings
  * @param {Language} language
+ * @param {Stage} [stage] defaults to the whole analysis
  */
-export function script(settings, language) {
-	return steps(settings, language)
+export function script(settings, language, stage = 'changes') {
+	return steps(settings, language, stage)
 		.map((step, index) => `# ${index + 1}. ${step.title}\n${step.code}`)
 		.join('\n\n');
 }

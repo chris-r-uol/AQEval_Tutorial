@@ -6,7 +6,7 @@ There are three ways in, and they all teach the same analysis.
 
 | | |
 | --- | --- |
-| **[Interactive tutorial](https://chris-r-uol.github.io/AQEval_Tutorial/)** | Run the experiment with dials instead of code. Choose a site, remove the weather, set the sensitivity, and watch the figure, the findings and the code change together. Nothing to install. |
+| **[Interactive tutorial](https://chris-r-uol.github.io/AQEval_Tutorial/)** | Run the experiment with dials instead of code. It opens on the raw hourly measurements; students then add the analysis a step at a time (average, isolate the signal, find the break points, measure the changes) and watch the figure, the notes and the code build up together. Nothing to install. |
 | **[Run the code](https://codespaces.new/chris-r-uol/AQEval_Tutorial?quickstart=1)** | A ready-made workspace in your browser, with RStudio for the R version and a notebook for the Python version. Every package is already installed. Needs a free GitHub account. |
 | **[Step-by-step walkthrough](walkthrough.md)** | The original written practical, in R, with every step explained and its output shown. |
 
@@ -76,7 +76,7 @@ This needs `aqeval` 0.7.3 or later. Earlier versions differed from R in other wa
 | `python/requirements.txt` | The Python packages, pinned. |
 | `walkthrough.md`, `walkthrough.qmd` | The original step-by-step practical and its Quarto source. |
 | `site/` | The interactive tutorial: a SvelteKit site published to GitHub Pages. |
-| `site/static/data/` | The precomputed results the site shows. |
+| `site/static/data/` | The hourly measurements and precomputed results the site shows. |
 | `pipeline/` | The scripts that compute those results. |
 | `pipeline/parity/` | A check of Python `aqeval` against R AQEval, and what it found. |
 | `.devcontainer/` | The definition of the Codespace. |
