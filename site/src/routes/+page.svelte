@@ -6,24 +6,30 @@
 	 * the right. Every result was computed ahead of time by the real AQEval
 	 * analysis (see `pipeline/build_data.py`); the page looks up the one that
 	 * matches the dials.
+	 *
+	 * A reader starts with the measurements alone and adds the analysis a step
+	 * at a time. The figure, the notes under it and the code show only the
+	 * steps added so far.
 	 */
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { afterNavigate, replaceState } from '$app/navigation';
 	import type { Feature, Polygon } from 'geojson';
-	import { describeSegments, points } from '$lib/analysis';
+	import { describeSegments, points, timeline } from '$lib/analysis';
 	import { annualOption, figureOption, PIN_COLOURS } from '$lib/charts';
-	import { isolates, type Language, type Settings } from '$lib/code';
+	import { isolates, reached, type Language, type Settings, type Stage } from '$lib/code';
 	import { CODESPACE_URL, REPOSITORY_URL } from '$lib/config';
-	import { loadBoundary, loadManifest, loadMeasured, loadRuns } from '$lib/data';
+	import { loadBoundary, loadHourly, loadManifest, loadMeasured, loadRuns } from '$lib/data';
 	import { experiment } from '$lib/experiment.svelte';
 	import {
+		AVERAGE_NOUN,
 		AVERAGING_LABEL,
 		POLLUTANT_LABEL,
 		UNIT,
 		describeIsolation,
 		formatDate
 	} from '$lib/format';
-	import type { Manifest, MapMetric, Pin, RunFile } from '$lib/types';
+	import { STAGE_ACTION, STAGE_TEASER } from '$lib/stages';
+	import type { Manifest, MapMetric, Pin, RunFile, Series } from '$lib/types';
 	import Chart from '$lib/components/Chart.svelte';
 	import CodePanel from '$lib/components/CodePanel.svelte';
 	import Compare from '$lib/components/Compare.svelte';
@@ -31,6 +37,8 @@
 	import Report from '$lib/components/Report.svelte';
 	import Segmented from '$lib/components/Segmented.svelte';
 	import SiteMap from '$lib/components/SiteMap.svelte';
+	import StageNotes from '$lib/components/StageNotes.svelte';
+	import Stepper from '$lib/components/Stepper.svelte';
 	import Tasks from '$lib/components/Tasks.svelte';
 
 	let manifest = $state.raw<Manifest | null>(null);
@@ -41,11 +49,17 @@
 	 *  Replaced whole, so the figure never mixes one set-up's settings with
 	 *  another's data while a file is still on its way. */
 	interface View {
+		/** The settings in force at this stage: before the isolation step is
+		 *  added, nothing is isolated, whatever its dials say. */
 		settings: Settings;
 		language: Language;
-		runs: RunFile;
+		stage: Stage;
+		/** The hourly measurements, for the first stage. */
+		hourly: Series | null;
+		/** The results, once there is an analysis to show. */
+		runs: RunFile | null;
 		/** The same site and pollutant with nothing isolated. */
-		measured: RunFile;
+		measured: RunFile | null;
 	}
 	let view = $state.raw<View | null>(null);
 	let loading = $state(false);
@@ -75,18 +89,24 @@
 		return () => window.removeEventListener('hashchange', onHashChange);
 	});
 
-	// Fetch the results for the current dials. Files already fetched resolve at
-	// once, so only a new site, pollutant or isolation setting waits.
+	// Fetch the results for the current dials and stage. Files already fetched
+	// resolve at once, so only a new site, pollutant or isolation setting waits.
 	$effect(() => {
 		if (!manifest) return;
-		const settings = experiment.settings;
+		const settings = experiment.effective;
 		const language = experiment.language;
+		const stage = experiment.stage;
+		const analysing = reached(stage, 'average');
 		let cancelled = false;
 		loading = true;
-		Promise.all([loadRuns(settings, language), loadMeasured(settings, language)])
-			.then(([runs, measured]) => {
+		Promise.all([
+			analysing ? null : loadHourly(settings),
+			analysing ? loadRuns(settings, language) : null,
+			analysing ? loadMeasured(settings, language) : null
+		])
+			.then(([hourly, runs, measured]) => {
 				if (cancelled) return;
-				view = { settings, language, runs, measured };
+				view = { settings, language, stage, hourly, runs, measured };
 				failure = null;
 				loading = false;
 			})
@@ -95,6 +115,11 @@
 				failure = String(error.message ?? error);
 				loading = false;
 			});
+		// Fetch what the next step needs while this one is being read, so that
+		// adding it is instant. A failure here is reported when it is needed.
+		const ahead = untrack(() => experiment.settings);
+		if (!analysing) loadMeasured(settings, language).catch(() => {});
+		else if (!reached(stage, 'isolate')) loadRuns(ahead, language).catch(() => {});
 		return () => {
 			cancelled = true;
 		};
@@ -119,8 +144,14 @@
 
 	let siteName = (code: string) => manifest?.sites.find((site) => site.code === code)?.name ?? code;
 
-	let averaged = $derived(view ? view.runs.averaging[view.settings.averaging] : null);
-	let run = $derived(averaged && view ? averaged.runs[String(view.settings.h)] : null);
+	let averaged = $derived(view?.runs ? view.runs.averaging[view.settings.averaging] : null);
+	let measuredAveraged = $derived(view?.measured ? view.measured.averaging[view.settings.averaging] : null);
+	// The run holds the break points and the changes, so it only counts once
+	// the reader has asked for them.
+	let run = $derived(
+		averaged && view && reached(view.stage, 'breaks') ? averaged.runs[String(view.settings.h)] : null
+	);
+	let measuring = $derived(view?.stage === 'changes');
 	let isolating = $derived(view ? isolates(view.settings) : false);
 	let pollutant = $derived(view ? POLLUTANT_LABEL[view.settings.pollutant] : '');
 
@@ -155,7 +186,7 @@
 	let alreadyPinned = $derived(pins.some(onScreen));
 
 	function pin() {
-		if (!view || !run || pins.length >= MAX_PINS || alreadyPinned) return;
+		if (!view || !run || !measuring || pins.length >= MAX_PINS || alreadyPinned) return;
 		// Reuse the first letter that is free, so labels stay A to D.
 		const index = PIN_COLOURS.findIndex((_, i) => !pins.some((p) => p.label === 'ABCD'[i]));
 		pins = [
@@ -173,35 +204,75 @@
 
 	// --- Figure ----------------------------------------------------------------
 
-	let rows = $derived(run ? describeSegments(run) : []);
+	let rows = $derived(run && measuring ? describeSegments(run) : []);
 
 	let figure = $derived.by(() => {
-		if (!view || !averaged || !run || !manifest) return null;
-		const measured = points(view.measured.averaging[view.settings.averaging]);
+		if (!view || !manifest) return null;
+		const range: [number, number] = [Date.UTC(manifest.years[0], 0, 1), Date.UTC(manifest.years[1] + 1, 0, 1)];
+		if (!reached(view.stage, 'average')) {
+			if (!view.hourly) return null;
+			return figureOption({
+				analysed: points(view.hourly),
+				analysedName: 'Hourly measurements',
+				hourly: timeline(view.hourly),
+				unit: UNIT,
+				range
+			});
+		}
+		if (!averaged || !measuredAveraged) return null;
+		const measured = points(measuredAveraged);
 		const isolated = isolating ? points(averaged) : null;
 		return figureOption({
 			analysed: isolated ?? measured,
 			analysedName: isolated ? 'Isolated signal' : 'Measured',
 			measured: isolated && showMeasured ? measured : null,
-			run,
+			breaks: run?.breaks ?? null,
+			trend: measuring && run ? run.trend : null,
 			rows,
-			events: manifest.events,
+			// The events come in with the break points, which is when the
+			// question becomes when the level changed.
+			events: run ? manifest.events : [],
 			// A pin of the set-up on screen would only draw over the trend.
-			pins: pins
-				.filter((p) => !onScreen(p))
-				.map((p) => ({ label: p.label, colour: p.colour, trend: p.run.trend })),
+			pins: measuring
+				? pins
+						.filter((p) => !onScreen(p))
+						.map((p) => ({ label: p.label, colour: p.colour, trend: p.run.trend }))
+				: [],
 			unit: UNIT,
-			range: [Date.UTC(manifest.years[0], 0, 1), Date.UTC(manifest.years[1] + 1, 0, 1)]
+			range
 		});
 	});
 
-	let figureDescription = $derived(
-		view && run
-			? `${pollutant} at ${siteName(view.settings.site)}, averaged to ${AVERAGING_LABEL[view.settings.averaging]}, ` +
-				`with the fitted trend in ${rows.length || 1} stretch${rows.length > 1 ? 'es' : ''}. ` +
-				'The findings below the figure give the dates and sizes of the changes.'
-			: 'Loading'
-	);
+	let averagingLabel = $derived(view ? AVERAGING_LABEL[view.settings.averaging] : '');
+
+	let figureDescription = $derived.by(() => {
+		if (!view) return 'Loading';
+		const where = `${pollutant} at ${siteName(view.settings.site)}`;
+		switch (view.stage) {
+			case 'data':
+				return `Hourly ${where}, as measured, ${manifest?.years[0]} to ${manifest?.years[1]}.`;
+			case 'average':
+				return `${where}, averaged to ${averagingLabel}.`;
+			case 'isolate':
+				return `${where}, ${isolating ? 'with the weather and seasons removed, ' : ''}averaged to ${averagingLabel}.`;
+			case 'breaks':
+				return `${where}, averaged to ${averagingLabel}, with ${run?.breaks.length ?? 0} break points marked. The notes below the figure give their dates.`;
+			default:
+				return (
+					`${where}, averaged to ${averagingLabel}, ` +
+					`with the fitted trend in ${rows.length || 1} stretch${rows.length > 1 ? 'es' : ''}. ` +
+					'The findings below the figure give the dates and sizes of the changes.'
+				);
+		}
+	});
+
+	const NOTES_TITLE: Record<Stage, string> = {
+		data: 'What you are looking at',
+		average: 'What averaging does',
+		isolate: 'What isolating the signal does',
+		breaks: 'Where the level shifts',
+		changes: 'What the analysis found'
+	};
 
 	// --- Map and site comparison -------------------------------------------------
 
@@ -229,10 +300,9 @@
 		much. The method is <a href="https://karlropkins.github.io/AQEval/" target="_blank" rel="noopener">AQEval</a>.
 	</p>
 	<p class="intro__how">
-		<strong>Move a dial</strong> and the figure, the findings and the code all update together. When you
-		are ready to run the code for real, <a href={CODESPACE_URL} target="_blank" rel="noopener"
-			>open the workspace</a
-		>.
+		<strong>Start with the measurements</strong>, as the monitor recorded them. Then add the analysis one
+		step at a time, and watch the figure, the notes and the code build up together. When you are ready to
+		run the code for real, <a href={CODESPACE_URL} target="_blank" rel="noopener">open the workspace</a>.
 	</p>
 </section>
 
@@ -254,6 +324,7 @@
 
 		<div class="bench__main">
 			<section class="card" aria-labelledby="figure-title">
+				<Stepper />
 				<div class="card__head">
 					<div>
 						<h2 id="figure-title" class="card__title">
@@ -261,19 +332,28 @@
 						</h2>
 						{#if view}
 							<p class="muted setup">
-								{describeIsolation(view.settings)} · averaged to {AVERAGING_LABEL[view.settings.averaging]}
-								· <code>h = {view.settings.h}</code> · computed in {view.language === 'r' ? 'R' : 'Python'}
+								{#if view.stage === 'data'}
+									Hourly measurements, {manifest.years[0]} to {manifest.years[1]} · nothing averaged or removed
+								{:else if view.stage === 'average'}
+									As measured · averaged to {averagingLabel}
+								{:else}
+									{describeIsolation(view.settings)} · averaged to {averagingLabel}
+									{#if run}· <code>h = {view.settings.h}</code>{/if}
+									· computed in {view.language === 'r' ? 'R' : 'Python'}
+								{/if}
 							</p>
 						{/if}
 					</div>
-					<button
-						class="btn btn--secondary btn--small"
-						onclick={pin}
-						disabled={!run || alreadyPinned || pins.length >= MAX_PINS}
-						title={pins.length >= MAX_PINS ? `Remove a pin first: ${MAX_PINS} is the most the figure can show` : ''}
-					>
-						{alreadyPinned ? 'Pinned' : 'Pin this result'}
-					</button>
+					{#if measuring}
+						<button
+							class="btn btn--secondary btn--small"
+							onclick={pin}
+							disabled={!run || alreadyPinned || pins.length >= MAX_PINS}
+							title={pins.length >= MAX_PINS ? `Remove a pin first: ${MAX_PINS} is the most the figure can show` : ''}
+						>
+							{alreadyPinned ? 'Pinned' : 'Pin this result'}
+						</button>
+					{/if}
 				</div>
 
 				<div class="figure" class:figure--loading={loading}>
@@ -284,22 +364,37 @@
 					{/if}
 				</div>
 
-				{#if view && run}
+				{#if view && view.stage === 'data' && view.hourly}
 					<p class="muted caption">
-						Each grey point is one {AVERAGING_LABEL[view.settings.averaging].replace(/^1 /, '')} average. The
-						<span class="key key--trend">red line</span> is the trend AQEval fitted.
-						<span class="key key--break">Blue</span> marks where it changes: a dashed line where one long
-						stretch gives way to the next, and a shaded band where the change was over within weeks. The
-						vertical axis is drawn to fit the middle 99% of the points, so that the trend can be seen: the
-						most extreme few are off the scale. Drag the bar under the figure to zoom, and click a name in
-						the key to show or hide it.
+						The grey line is every hourly measurement, as the monitor recorded it. Where it stops, the
+						monitor has no valid measurement for those hours. The vertical axis is drawn to fit the middle 99%
+						of the hours, so the most extreme few are off the scale. Drag the ends of the bar under the figure
+						to zoom in.
+					</p>
+				{:else if view && averaged}
+					<p class="muted caption">
+						Each {isolating ? 'dark grey' : 'grey'} point is one {AVERAGE_NOUN[view.settings.averaging]} average{isolating
+							? ' of the isolated signal'
+							: ''}.
+						{#if measuring && run}
+							The <span class="key key--trend">red line</span> is the trend AQEval fitted.
+							<span class="key key--break">Blue</span> marks where it changes: a dashed line where one long
+							stretch gives way to the next, and a shaded band where the change was over within weeks. The
+							black lines mark the events. The break points from step 4 are switched off: click
+							<em>Break points</em> in the key to see them.
+						{:else if run}
+							The <span class="key key--breakpoint">dashed lines</span> are the break points, each inside a
+							shaded band: the range of dates it could fall in. The solid black lines mark the events.
+						{/if}
+						The vertical axis is drawn to fit the middle 99% of the points, so the most extreme few are off the
+						scale. Drag the bar under the figure to zoom{run ? ', and click a name in the key to show or hide it' : ''}.
 					</p>
 					{#if isolating}
 						<label class="check">
 							<input type="checkbox" bind:checked={showMeasured} />
 							Show the measurements underneath, in lighter grey
 						</label>
-						{#if view.runs.formula}
+						{#if view.runs?.formula}
 							<p class="muted model">
 								Model removed from the measurements: <code>{view.runs.formula}</code>
 							</p>
@@ -312,6 +407,16 @@
 						Check your connection, or try another setting. ({failure})
 					</p>
 				{/if}
+
+				{#if experiment.nextStage}
+					{@const next = experiment.nextStage}
+					<div class="next">
+						<button class="btn" onclick={() => experiment.goTo(next)}>
+							Next: {STAGE_ACTION[next].toLowerCase()} <span aria-hidden="true">→</span>
+						</button>
+						<p class="muted">{STAGE_TEASER[next]}</p>
+					</div>
+				{/if}
 			</section>
 
 			{#if !wide}
@@ -321,13 +426,28 @@
 			{/if}
 
 			<section class="card" aria-labelledby="found-title">
-				<h2 id="found-title" class="card__title">What the analysis found</h2>
-				{#if view && run}
+				<h2 id="found-title" class="card__title">{NOTES_TITLE[view?.stage ?? experiment.stage]}</h2>
+				{#if view && measuring && run}
 					<Report
 						{run}
 						events={manifest.events}
 						{pollutant}
 						maxBreaks={manifest.maxBreaksToQuantify}
+						language={view.language}
+					/>
+				{:else if view && !measuring}
+					<StageNotes
+						stage={view.stage}
+						settings={view.settings}
+						hourly={view.hourly}
+						{averaged}
+						measured={measuredAveraged}
+						{isolating}
+						{run}
+						events={manifest.events}
+						{pollutant}
+						{siteName}
+						years={manifest.years}
 						language={view.language}
 					/>
 				{:else if failure}
@@ -337,18 +457,21 @@
 				{/if}
 			</section>
 
-			<section class="card" aria-labelledby="compare-title">
-				<h2 id="compare-title" class="card__title">Compare results</h2>
-				<Compare
-					{pins}
-					{siteName}
-					onLoad={(p) => {
-						experiment.language = p.language;
-						experiment.set(p.settings);
-					}}
-					onRemove={(p) => (pins = pins.filter((other) => other.id !== p.id))}
-				/>
-			</section>
+			{#if measuring || pins.length}
+				<section class="card" aria-labelledby="compare-title">
+					<h2 id="compare-title" class="card__title">Compare results</h2>
+					<Compare
+						{pins}
+						{siteName}
+						onLoad={(p) => {
+							experiment.language = p.language;
+							experiment.set(p.settings);
+							experiment.goTo('changes');
+						}}
+						onRemove={(p) => (pins = pins.filter((other) => other.id !== p.id))}
+					/>
+				</section>
+			{/if}
 
 			<section class="card" aria-labelledby="sites-title">
 				<div class="card__head">
@@ -424,7 +547,8 @@
 	<section class="band" id="tasks" aria-labelledby="tasks-title">
 		<h2 id="tasks-title">Tasks</h2>
 		<p class="band__lede">
-			Each task can be answered on this page by moving the dials. Then try it in code.
+			Each task can be answered on this page by moving the dials. Most need every step of the analysis
+			added. Then try it in code.
 		</p>
 		<Tasks />
 	</section>
@@ -601,6 +725,27 @@
 
 	.key--break {
 		color: var(--colour-break);
+	}
+
+	.key--breakpoint {
+		color: #505a5f;
+	}
+
+	/* The way on to the next step, at the foot of the figure. */
+	.next {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var(--space-2) var(--space-3);
+		margin-top: var(--space-3);
+		padding-top: var(--space-3);
+		border-top: 1px solid var(--border-subtle);
+	}
+
+	.next p {
+		flex: 1 1 16rem;
+		margin: 0;
+		font-size: 0.875rem;
 	}
 
 	.check {

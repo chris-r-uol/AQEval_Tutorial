@@ -8,7 +8,7 @@
  */
 import { base } from '$app/paths';
 import type { Language, Settings } from './code';
-import type { Manifest, RunFile } from './types';
+import type { Manifest, RunFile, Series } from './types';
 import type { Feature, Polygon } from 'geojson';
 
 const cache = new Map<string, Promise<unknown>>();
@@ -51,3 +51,10 @@ export const loadRuns = (settings: Settings, language: Language) =>
  */
 export const loadMeasured = (settings: Settings, language: Language) =>
 	loadRuns({ ...settings, deseason: false, deweather: false, background: null }, language);
+
+/**
+ * The measurements as they come, one value an hour, before any analysis.
+ * The same in both languages: both download the same AURN files.
+ */
+export const loadHourly = (settings: Pick<Settings, 'site' | 'pollutant'>) =>
+	load<Series>(`hourly/${settings.site}_${settings.pollutant}.json`);

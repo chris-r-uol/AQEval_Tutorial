@@ -638,6 +638,25 @@ def export() -> None:
             }
         )
 
+    # The measurements as they come, hour by hour: what a reader sees first,
+    # before any analysis. The same in both languages, since both download
+    # the same AURN files. Missing hours are kept as gaps, so that every value
+    # sits one hour after the one before it.
+    (OUT / "hourly").mkdir(parents=True)
+    for code in SITES:
+        data = load_site(code).set_index("date").sort_index()
+        hours = pd.date_range(data.index[0], data.index[-1], freq="h")
+        for pollutant in POLLUTANTS:
+            series = data[pollutant].reindex(hours)
+            block = {
+                "start": iso_date(hours[0]),
+                "stepHours": 1,
+                "values": [None if np.isnan(v) else round(float(v), 1) for v in series.to_numpy(dtype=float)],
+            }
+            (OUT / "hourly" / f"{code}_{pollutant}.json").write_text(
+                json.dumps(block, separators=(",", ":"), allow_nan=False)
+            )
+
     offered = {str(h) for h in H_VALUES}
     for engine in ENGINES:
         (OUT / "runs" / engine).mkdir(parents=True)

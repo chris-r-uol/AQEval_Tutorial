@@ -2,12 +2,13 @@
 	/**
 	 * The code behind the figure.
 	 *
-	 * Shows the R or Python that produces exactly what is on screen. Every
-	 * value a dial controls is highlighted, and flashes when its dial moves, so
-	 * turning a dial teaches which argument it is.
+	 * Shows the R or Python that produces exactly what is on screen, up to the
+	 * step the reader has reached. Every value a dial controls is highlighted,
+	 * and flashes when its dial moves, so turning a dial teaches which argument
+	 * it is. Adding a step marks the code it adds.
 	 */
 	import { untrack } from 'svelte';
-	import { plain, script, segments, steps, type Settings } from '$lib/code';
+	import { plain, reached, script, segments, steps, type Settings } from '$lib/code';
 	import { CODESPACE_URL } from '$lib/config';
 	import { experiment } from '$lib/experiment.svelte';
 	import { highlight } from '$lib/highlight';
@@ -15,12 +16,31 @@
 
 	let settings = $derived(experiment.settings);
 	let language = $derived(experiment.language);
-	let list = $derived(steps(settings, language));
+	let stage = $derived(experiment.stage);
+	let list = $derived(steps(settings, language, stage));
 
 	// Below h = 0.3 an 8-hour series is slow in both languages: R's search for
 	// break points slows sharply, and in either language measuring k breaks
 	// takes 9^k model fits.
-	let slow = $derived(settings.averaging === '8 hour' && settings.h < 0.3);
+	let slow = $derived(reached(stage, 'breaks') && settings.averaging === '8 hour' && settings.h < 0.3);
+
+	// The steps a newly added stage brought in, so they can be marked.
+	let fresh = $state<string[]>([]);
+	let shown: string[] | null = null;
+	let freshTimer: ReturnType<typeof setTimeout> | undefined;
+
+	$effect(() => {
+		const ids = list.map((step) => step.id);
+		untrack(() => {
+			const added = shown ? ids.filter((id) => !shown!.includes(id)) : [];
+			if (added.length) {
+				fresh = added;
+				clearTimeout(freshTimer);
+				freshTimer = setTimeout(() => (fresh = []), 2000);
+			}
+			shown = ids;
+		});
+	});
 
 	// Which dials changed most recently, so their values can flash.
 	let changed = $state<string[]>([]);
@@ -58,7 +78,7 @@
 	let copied = $state(false);
 
 	async function copy() {
-		await navigator.clipboard.writeText(plain(script(settings, language)));
+		await navigator.clipboard.writeText(plain(script(settings, language, stage)));
 		copied = true;
 		setTimeout(() => (copied = false), 2000);
 	}
@@ -90,8 +110,10 @@
 	<!-- Focusable so the keyboard can scroll it when a line is wider than the panel. -->
 	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 	<pre class="code__block" tabindex="0" aria-label={`${language === 'r' ? 'R' : 'Python'} code`}><code
-			>{#each list as step, index (step.id)}<span class="tok-comment"># {index + 1}. {step.title}</span>
-{@html render(step.code, changed)}{index < list.length - 1 ? '\n\n' : ''}{/each}</code
+			>{#each list as step, index (step.id)}<span class="step" class:step--fresh={fresh.includes(step.id)}
+					><span class="tok-comment"># {index + 1}. {step.title}</span>
+{@html render(step.code, changed)}</span
+				>{index < list.length - 1 ? '\n\n' : ''}{/each}</code
 		></pre>
 
 	<div class="code__actions">
@@ -168,6 +190,21 @@
 		border-radius: 3px;
 		padding: 1px 2px;
 		box-shadow: inset 0 -2px 0 var(--dial-strong);
+	}
+
+	/* Code a newly added step brought in. */
+	.step--fresh {
+		animation: arrive 2s ease-out;
+	}
+
+	@keyframes arrive {
+		0%,
+		40% {
+			background: var(--dial);
+		}
+		100% {
+			background: transparent;
+		}
 	}
 
 	.code__block :global(mark.dial--flash) {

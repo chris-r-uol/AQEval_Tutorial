@@ -25,6 +25,52 @@ export function points(series: Series): Array<[number, number]> {
 	return out;
 }
 
+/**
+ * A series as [time, value] pairs with the gaps kept as nulls, so that a line
+ * drawn through it breaks where the measurements stop.
+ */
+export function timeline(series: Series): Array<[number, number | null]> {
+	const start = toMs(series.start);
+	const step = series.stepHours * 3_600_000;
+	return series.values.map((value, index) => [start + index * step, value]);
+}
+
+/** Plain facts about a series of measurements, before any analysis. */
+export interface Profile {
+	/** Values the series has room for, from its first moment to its last. */
+	count: number;
+	/** Of those, the ones with a measurement. */
+	valid: number;
+	/** The middle 90% of the measurements lie between these. */
+	typical: [number, number];
+	mean: number;
+	highest: { time: number; value: number };
+}
+
+export function profile(series: Series): Profile | null {
+	const measured = points(series);
+	if (!measured.length) return null;
+	const sorted = measured.map(([, value]) => value).sort((a, b) => a - b);
+	const at = (share: number) => sorted[Math.round(share * (sorted.length - 1))];
+	let highest = measured[0];
+	for (const point of measured) if (point[1] > highest[1]) highest = point;
+	return {
+		count: series.values.length,
+		valid: measured.length,
+		typical: [at(0.05), at(0.95)],
+		mean: sorted.reduce((sum, value) => sum + value, 0) / sorted.length,
+		highest: { time: highest[0], value: highest[1] }
+	};
+}
+
+/** How far a series strays from its own mean: its standard deviation. */
+export function spread(series: Series): number | null {
+	const values = series.values.filter((value): value is number => value !== null);
+	if (values.length < 2) return null;
+	const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+	return Math.sqrt(values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / (values.length - 1));
+}
+
 export interface SegmentRow extends Segment {
 	kind: 'fall' | 'rise' | 'steady';
 	pace: 'abrupt' | 'gradual';

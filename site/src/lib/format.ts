@@ -19,6 +19,19 @@ const monthFormat = new Intl.DateTimeFormat('en-GB', { month: 'short', year: 'nu
 export const formatDate = (value: string | number) =>
 	dateFormat.format(typeof value === 'number' ? value : toMs(value));
 
+const hourFormat = new Intl.DateTimeFormat('en-GB', {
+	day: 'numeric',
+	month: 'short',
+	year: 'numeric',
+	hour: '2-digit',
+	minute: '2-digit',
+	timeZone: 'UTC'
+});
+
+/** A moment to the hour, for hourly measurements. AURN times are GMT. */
+export const formatHour = (value: string | number) =>
+	`${hourFormat.format(typeof value === 'number' ? value : toMs(value))} GMT`;
+
 export const formatMonth = (value: string | number) =>
 	monthFormat.format(typeof value === 'number' ? value : toMs(value));
 
@@ -65,6 +78,13 @@ export const AVERAGING_LABEL: Record<string, string> = {
 	'8 hour': '8 hours',
 	day: '1 day',
 	'7 day': '1 week'
+};
+
+/** One average of each period, as a reader would name it: "one daily average". */
+export const AVERAGE_NOUN: Record<string, string> = {
+	'8 hour': '8-hour',
+	day: 'daily',
+	'7 day': 'weekly'
 };
 
 /** One line naming a set-up, for the comparison table. */

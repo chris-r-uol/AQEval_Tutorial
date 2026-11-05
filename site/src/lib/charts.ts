@@ -5,9 +5,9 @@
  * tooltip style and one palette.
  */
 import type { EChartsOption, SeriesOption } from 'echarts';
-import { formatDate, toMs } from './format';
+import { formatDate, formatHour, toMs } from './format';
 import type { SegmentRow } from './analysis';
-import type { EventMarker, Run, Site } from './types';
+import type { BreakPoint, EventMarker, Run, Site } from './types';
 
 /** AQEval's own figures use grey data, a red trend and blue for the changes.
  *  Anyone who runs the code will see those colours, so the page uses them too. */
@@ -51,18 +51,28 @@ export interface PinnedTrend {
 	trend: Run['trend'];
 }
 
+/**
+ * What to draw. The figure is built up in layers as the reader adds steps of
+ * the analysis, so everything after the data itself is optional.
+ */
 export interface FigureInput {
-	/** The series the analysis ran on, as [time, value]. */
+	/** The series the analysis runs on, as [time, value]. */
 	analysed: Array<[number, number]>;
 	analysedName: string;
-	/** The measured series, drawn underneath when the analysis ran on an
+	/** The hourly measurements, drawn as a line instead of the points. Gaps
+	 *  are nulls, so the line breaks where the measurements stop. */
+	hourly?: Array<[number, number | null]> | null;
+	/** The measured series, drawn underneath when the analysis runs on an
 	 *  isolated one. */
-	measured: Array<[number, number]> | null;
-	run: Run;
-	/** The run's segment report, described. */
-	rows: SegmentRow[];
-	events: EventMarker[];
-	pins: PinnedTrend[];
+	measured?: Array<[number, number]> | null;
+	/** The break points found, once that step is added. */
+	breaks?: BreakPoint[] | null;
+	/** The fitted trend, once the changes are measured. */
+	trend?: Run['trend'] | null;
+	/** The segment report, described, once the changes are measured. */
+	rows?: SegmentRow[];
+	events?: EventMarker[];
+	pins?: PinnedTrend[];
 	unit: string;
 	range: [number, number];
 }
@@ -84,7 +94,10 @@ export function focusRange(values: Array<[number, number]>): [number, number] {
 
 /** The main figure: data, fitted trend, break points and events. */
 export function figureOption(input: FigureInput): EChartsOption {
-	const { analysed, analysedName, measured, run, rows, events, pins, unit, range } = input;
+	const { analysed, analysedName, hourly, measured, breaks, trend, unit, range } = input;
+	const rows = input.rows ?? [];
+	const events = input.events ?? [];
+	const pins = input.pins ?? [];
 	const [low, high] = focusRange(analysed);
 
 	const scatter = (name: string, data: Array<[number, number]>, colour: string, z: number): SeriesOption => ({
@@ -105,8 +118,26 @@ export function figureOption(input: FigureInput): EChartsOption {
 	});
 
 	const series: SeriesOption[] = [];
-	if (measured) series.push(scatter('Measured', measured, COLOURS.measured, 1));
-	series.push(scatter(analysedName, analysed, COLOURS.analysed, 2));
+	if (hourly) {
+		// The measurements as they come: a line, as an instrument records them.
+		// Seventy thousand hours is more than a screen has pixels, so the line
+		// is thinned to its shape for drawing; zooming in brings back the hours.
+		series.push({
+			name: analysedName,
+			type: 'line',
+			symbol: 'none',
+			sampling: 'lttb',
+			lineStyle: { width: 0.7, color: COLOURS.analysed },
+			itemStyle: { color: COLOURS.analysed },
+			data: hourly,
+			connectNulls: false,
+			clip: true,
+			z: 2
+		});
+	} else {
+		if (measured) series.push(scatter('Measured', measured, COLOURS.measured, 1));
+		series.push(scatter(analysedName, analysed, COLOURS.analysed, 2));
+	}
 
 	for (const pin of pins) {
 		series.push({
@@ -120,13 +151,69 @@ export function figureOption(input: FigureInput): EChartsOption {
 		});
 	}
 
+	if (trend) addChanges(series, trend, rows);
+	if (breaks) addBreakPoints(series, breaks);
+	if (events.length) addEvents(series, events);
+
+	return {
+		textStyle: TEXT,
+		animation: false,
+		grid: { top: 58, right: 18, bottom: 58, left: 50 },
+		legend: {
+			// One row that pages sideways on a narrow screen, rather than
+			// wrapping onto the top of the plot.
+			type: 'scroll',
+			top: 0,
+			left: 0,
+			itemHeight: 8,
+			itemWidth: 16,
+			textStyle: { fontSize: 12, color: '#505a5f' },
+			// The break points start hidden once there are changes to show,
+			// and shown when they are all there is.
+			selected: { [BREAK_POINT_SERIES]: rows.length === 0 }
+		},
+		tooltip: {
+			...TOOLTIP,
+			trigger: 'axis',
+			axisPointer: { type: 'line', lineStyle: { color: '#505a5f' } },
+			formatter: (params) => {
+				const list = Array.isArray(params) ? params : [params];
+				if (!list.length) return '';
+				const time = (list[0].value as number[])[0];
+				const rows = list
+					.filter((item) => item.seriesType === 'line' && (item.value as Array<number | null>)[1] != null)
+					.map((item) => `${item.marker}${item.seriesName}: <b>${(item.value as number[])[1].toFixed(1)}</b> ${unit}`);
+				// The hourly line is read to the hour; everything else to the day.
+				return [hourly ? formatHour(time) : formatDate(time), ...rows].join('<br>');
+			}
+		},
+		xAxis: { type: 'time', min: range[0], max: range[1], ...AXIS_STYLE, splitLine: { show: false } },
+		yAxis: {
+			type: 'value',
+			name: unit,
+			nameTextStyle: { color: '#505a5f', fontSize: 11, align: 'left' },
+			min: low,
+			max: high,
+			...AXIS_STYLE
+		},
+		// A slider only. Zooming on the mouse wheel would capture the wheel as
+		// the reader scrolls the page past the figure.
+		dataZoom: [
+			{ type: 'slider', height: 18, bottom: 8, filterMode: 'none', borderColor: '#e5e5e5', showDetail: false }
+		],
+		series
+	};
+}
+
+/** The fitted trend, and blue where it changes. */
+function addChanges(series: SeriesOption[], trend: Run['trend'], rows: SegmentRow[]) {
 	series.push({
 		name: 'Fitted trend',
 		type: 'line',
 		symbol: 'none',
 		lineStyle: { width: 2.6, color: COLOURS.trend },
 		itemStyle: { color: COLOURS.trend },
-		data: run.trend.map(([time, value]) => [time, value]),
+		data: trend.map(([time, value]) => [time, value]),
 		z: 6
 	});
 
@@ -162,10 +249,16 @@ export function figureOption(input: FigureInput): EChartsOption {
 			data: boundaries
 		}
 	});
+}
 
-	// The break points from the step before are the starting guesses handed to
-	// the segment fit, not its answer, and they rarely sit where the trend
-	// bends. They are there to be looked at, but start switched off.
+/**
+ * The break points, each with the window it could lie in.
+ *
+ * Once the changes are measured, these are the starting guesses that were
+ * handed to the segment fit, not its answer, and they rarely sit where the
+ * trend bends. They are still there to be looked at, but start switched off.
+ */
+function addBreakPoints(series: SeriesOption[], breaks: BreakPoint[]) {
 	series.push({
 		name: BREAK_POINT_SERIES,
 		type: 'line',
@@ -175,18 +268,22 @@ export function figureOption(input: FigureInput): EChartsOption {
 		markArea: {
 			silent: true,
 			// How sure the search is about each date.
-			itemStyle: { color: 'rgba(80, 90, 95, 0.12)' },
-			data: run.breaks.map((b) => [{ xAxis: toMs(b.lower) }, { xAxis: toMs(b.upper) }]) as never
+			itemStyle: { color: 'rgba(80, 90, 95, 0.2)' },
+			data: breaks.map((b) => [{ xAxis: toMs(b.lower) }, { xAxis: toMs(b.upper) }]) as never
 		},
 		markLine: {
 			silent: true,
 			symbol: 'none',
 			label: { show: false },
-			lineStyle: { color: COLOURS.breakPoint, width: 1.2, type: 'dotted' },
-			data: run.breaks.map((b) => ({ xAxis: toMs(b.date) }))
+			// Dashed, so they are not mistaken for the events' solid lines.
+			lineStyle: { color: COLOURS.breakPoint, width: 1.6, type: [5, 3] },
+			data: breaks.map((b) => ({ xAxis: toMs(b.date) }))
 		}
 	});
+}
 
+/** The events the changes are being compared with, labelled. */
+function addEvents(series: SeriesOption[], events: EventMarker[]) {
 	series.push({
 		name: 'Event',
 		type: 'line',
@@ -208,53 +305,6 @@ export function figureOption(input: FigureInput): EChartsOption {
 			data: events.map((event) => ({ xAxis: toMs(event.date), name: event.short }))
 		}
 	});
-
-	return {
-		textStyle: TEXT,
-		animation: false,
-		grid: { top: 58, right: 18, bottom: 58, left: 50 },
-		legend: {
-			// One row that pages sideways on a narrow screen, rather than
-			// wrapping onto the top of the plot.
-			type: 'scroll',
-			top: 0,
-			left: 0,
-			itemHeight: 8,
-			itemWidth: 16,
-			textStyle: { fontSize: 12, color: '#505a5f' },
-			// With no segments to show, the break points are all there is.
-			selected: { [BREAK_POINT_SERIES]: rows.length === 0 }
-		},
-		tooltip: {
-			...TOOLTIP,
-			trigger: 'axis',
-			axisPointer: { type: 'line', lineStyle: { color: '#505a5f' } },
-			formatter: (params) => {
-				const list = Array.isArray(params) ? params : [params];
-				if (!list.length) return '';
-				const time = (list[0].value as number[])[0];
-				const rows = list
-					.filter((item) => item.seriesType === 'line')
-					.map((item) => `${item.marker}${item.seriesName}: <b>${(item.value as number[])[1].toFixed(1)}</b> ${unit}`);
-				return [formatDate(time), ...rows].join('<br>');
-			}
-		},
-		xAxis: { type: 'time', min: range[0], max: range[1], ...AXIS_STYLE, splitLine: { show: false } },
-		yAxis: {
-			type: 'value',
-			name: unit,
-			nameTextStyle: { color: '#505a5f', fontSize: 11, align: 'left' },
-			min: low,
-			max: high,
-			...AXIS_STYLE
-		},
-		// A slider only. Zooming on the mouse wheel would capture the wheel as
-		// the reader scrolls the page past the figure.
-		dataZoom: [
-			{ type: 'slider', height: 18, bottom: 8, filterMode: 'none', borderColor: '#e5e5e5', showDetail: false }
-		],
-		series
-	};
 }
 
 /** Annual means for every site, so the sites can be compared at a glance. */
