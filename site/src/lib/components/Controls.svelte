@@ -7,7 +7,7 @@
 	import { STAGES, reached, type Stage } from '$lib/code';
 	import { experiment } from '$lib/experiment.svelte';
 	import { STAGE_ACTION, STAGE_TEASER } from '$lib/stages';
-	import { AVERAGING_LABEL, POLLUTANT_LABEL, POLLUTANT_NAME, formatDuration } from '$lib/format';
+	import { AVERAGING_LABEL, POLLUTANT_LABEL, POLLUTANT_NAME, SITE_TYPE_LABEL, formatDuration } from '$lib/format';
 	import { SITE_COLOURS } from '$lib/charts';
 	import type { Manifest } from '$lib/types';
 	import Help from './Help.svelte';
@@ -79,7 +79,7 @@
 						<span class="site__text">
 							<span class="site__name">{site.name}</span>
 							<span class="site__meta">
-								{site.type === 'Urban Traffic' ? 'Roadside' : 'Background'} ·
+								{SITE_TYPE_LABEL[site.type] ?? site.type} ·
 								{site.insideCaz ? 'inside the Clean Air Zone' : `${site.kmFromBradford.toFixed(0)} km away, no zone`}
 							</span>
 						</span>
@@ -90,13 +90,16 @@
 			<Help>
 				<p>
 					Each site is a station on the national monitoring network (AURN). A <strong>roadside</strong> site
-					sits next to traffic, so it responds to what vehicles are doing. A <strong>background</strong> site
-					sits away from busy roads and shows the air the whole area shares.
+					sits next to traffic, so it responds to what vehicles are doing. An <strong>urban background</strong>
+					site sits away from busy roads and shows the air the whole town or city shares. A
+					<strong>rural background</strong> site is out in the countryside, far from towns, and shows the
+					regional background that the city and its streets add to.
 				</p>
 				<p>
 					Bradford has one station with a long record, on Mayo Avenue. The others are its nearest
 					neighbours, none of them in a charging zone, so they show what happened where there was no
-					Clean Air Zone.
+					Clean Air Zone. Ladybower, in the Peak District, is the nearest rural background station that
+					measures nitrogen oxides.
 				</p>
 			</Help>
 		</li>

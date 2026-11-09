@@ -16,6 +16,9 @@
 	import { UNIT, formatNumber, formatSigned } from '$lib/format';
 	import type { MapMetric, Site } from '$lib/types';
 
+	/** Further than this from every other site, a label cannot collide with theirs. */
+	const ALONE_METRES = 25_000;
+
 	interface Props {
 		sites: Site[];
 		boundary: Feature<Polygon> | null;
@@ -49,6 +52,9 @@
 			map = library.map(container, {
 				// A map that zooms as the page scrolls past it traps the reader.
 				scrollWheelZoom: false,
+				// Fit the sites as closely as the frame allows, not to the
+				// nearest whole zoom level.
+				zoomSnap: 0.25,
 				zoomControl: true,
 				attributionControl: true
 			});
@@ -137,8 +143,29 @@
 				.addTo(siteLayer);
 		}
 
-		// Labels alternate sides so neighbouring sites do not print over each other.
-		const west = [...sites].sort((a, b) => a.lon - b.lon);
+		// Each label sits on the side of its marker that faces away from the
+		// middle of the group of sites, so that neighbours' labels point apart.
+		// A site far from all the others, like the rural background, has room
+		// on either side: it is left out of the group and labelled on the right.
+		const alone = (site: Site) =>
+			sites.every(
+				(other) =>
+					other === site || library.latLng(site.lat, site.lon).distanceTo([other.lat, other.lon]) > ALONE_METRES
+			);
+		const group = sites.filter((site) => !alone(site));
+		const middle = {
+			lat: group.reduce((sum, site) => sum + site.lat, 0) / group.length,
+			lon: group.reduce((sum, site) => sum + site.lon, 0) / group.length
+		};
+		const side = (site: Site): 'left' | 'right' | 'top' | 'bottom' => {
+			if (alone(site)) return 'right';
+			// Degrees of longitude are shorter than degrees of latitude this far north.
+			const east = (site.lon - middle.lon) * Math.cos((middle.lat * Math.PI) / 180);
+			const north = site.lat - middle.lat;
+			if (Math.abs(east) >= Math.abs(north)) return east > 0 ? 'right' : 'left';
+			return north > 0 ? 'top' : 'bottom';
+		};
+		const OFFSET = { left: [-10, 0], right: [10, 0], top: [0, -10], bottom: [0, 10] } as const;
 		for (const site of sites) {
 			const isSelected = site.code === selected;
 			const marker = library
@@ -151,8 +178,8 @@
 				})
 				.bindTooltip(label(site), {
 					permanent: true,
-					direction: west.indexOf(site) % 2 === 0 ? 'left' : 'right',
-					offset: [west.indexOf(site) % 2 === 0 ? -10 : 10, 0],
+					direction: side(site),
+					offset: [...OFFSET[side(site)]],
 					className: isSelected ? 'site-label site-label--on' : 'site-label'
 				})
 				.on('click', () => onSelect(site.code))
@@ -180,7 +207,8 @@
 	<div class="map__canvas" bind:this={container}></div>
 	<ul class="map__legend" aria-label="Map key">
 		<li><span class="dot" style:background={SITE_COLOURS['Urban Traffic']}></span> Roadside site</li>
-		<li><span class="dot" style:background={SITE_COLOURS['Urban Background']}></span> Background site</li>
+		<li><span class="dot" style:background={SITE_COLOURS['Urban Background']}></span> Urban background site</li>
+		<li><span class="dot" style:background={SITE_COLOURS['Rural Background']}></span> Rural background site</li>
 		<li><span class="zone"></span> Clean Air Zone</li>
 	</ul>
 </div>
@@ -212,6 +240,21 @@
 		box-shadow: var(--shadow-raised);
 		font-size: 0.75rem;
 		line-height: 1.6;
+	}
+
+	/* On a phone the key would cover the sites at the bottom of the map, so it
+	   sits underneath instead, in two columns. */
+	@media (max-width: 600px) {
+		.map__legend {
+			position: static;
+			display: grid;
+			grid-template-columns: repeat(2, auto);
+			justify-content: start;
+			gap: 0 var(--space-4);
+			padding: var(--space-2) 0 0;
+			background: none;
+			box-shadow: none;
+		}
 	}
 
 	.dot {

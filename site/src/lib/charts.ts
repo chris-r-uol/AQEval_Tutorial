@@ -28,7 +28,8 @@ export const PIN_COLOURS = ['#5f2c6d', '#00703c', '#b58840', '#28a197'];
 
 export const SITE_COLOURS: Record<string, string> = {
 	'Urban Traffic': '#912b88',
-	'Urban Background': '#28a197'
+	'Urban Background': '#28a197',
+	'Rural Background': '#85994b'
 };
 
 const AXIS_STYLE = {

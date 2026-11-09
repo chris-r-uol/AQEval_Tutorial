@@ -116,7 +116,10 @@
 		<ul class="try">
 			<li>Drag the ends of the bar under the figure to zoom in to a single week. When in the day is it highest, and why?</li>
 			<li>Zoom back out to the whole record. Which time of year is worst?</li>
-			<li>Choose another site. How does a background site differ from a roadside one?</li>
+			<li>
+				Choose another site. How does the rural background at Ladybower compare with the roadside at
+				Bradford Mayo Avenue?
+			</li>
 		</ul>
 	{:else if stage === 'average'}
 		{#if averaged}

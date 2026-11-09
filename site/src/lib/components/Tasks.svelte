@@ -10,6 +10,16 @@
 
 <ol class="tasks">
 	<li>
+		<h3>How much do the city and the street add?</h3>
+		<p>
+			Pollution at a roadside is the regional background, plus what the city adds, plus what the street
+			adds. In <em>Compare the sites</em>, read the averages at Ladybower (rural background), Leeds Centre
+			(urban background) and the two roadside sites. How big is each increment, for NO₂ and for NOx? Which
+			one could a Clean Air Zone change?
+		</p>
+		<p class="muted">In the code: change the site to <code>"lb"</code> for Ladybower.</p>
+	</li>
+	<li>
 		<h3>Does NOx tell the same story as NO₂?</h3>
 		<p>
 			Measure the changes in NOx at Bradford Mayo Avenue. Pin the NO₂ result first, then switch
@@ -28,7 +38,7 @@
 	<li>
 		<h3>Which site makes the better control?</h3>
 		<p>
-			Leeds Centre and Dewsbury Ashworth Grange are both background sites. Use each in turn under
+			Leeds Centre and Dewsbury Ashworth Grange are both urban background sites. Use each in turn under
 			<em>Also account for</em>. Which changes survive, and which disappear? Look at the site comparison
 			chart too: how complete is each record, and how far away is each site?
 		</p>
