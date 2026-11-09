@@ -5,7 +5,7 @@
  * tooltip style and one palette.
  */
 import type { EChartsOption, SeriesOption } from 'echarts';
-import { formatDate, formatHour, toMs } from './format';
+import { formatDate, formatHour, formatMonth, toMs } from './format';
 import type { SegmentRow } from './analysis';
 import type { BreakPoint, EventMarker, Run, Site } from './types';
 
@@ -308,6 +308,89 @@ function addEvents(series: SeriesOption[], events: EventMarker[]) {
 	});
 }
 
+/** How each site is drawn in the comparison charts: its type's colour, and a
+ *  dashed line for the second site of a type, so colour is not doing all the
+ *  work. The selected site is drawn heavier. */
+function siteLine(sites: Site[], site: Site, index: number, selected: string) {
+	return {
+		color: SITE_COLOURS[site.type] ?? '#505a5f',
+		width: site.code === selected ? 3.2 : 1.6,
+		type: (sites.findIndex((s) => s.type === site.type) === index ? 'solid' : 'dashed') as 'solid' | 'dashed',
+		z: site.code === selected ? 5 : 2
+	};
+}
+
+/**
+ * NO₂ as a share of NOx, month by month, at every site. The measurements
+ * only: no AQEval analysis.
+ */
+export function ratioOption(sites: Site[], selected: string, events: EventMarker[]): EChartsOption {
+	// The middle of each month, so a point sits under its month on the axis.
+	const middle = (month: string) => Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1, 15);
+	return {
+		textStyle: TEXT,
+		animation: false,
+		grid: { top: 52, right: 16, bottom: 26, left: 44 },
+		legend: {
+			type: 'scroll',
+			top: 0,
+			left: 0,
+			itemHeight: 8,
+			itemWidth: 16,
+			textStyle: { fontSize: 11, color: '#505a5f' }
+		},
+		tooltip: {
+			...TOOLTIP,
+			trigger: 'axis',
+			formatter: (params) => {
+				const list = (Array.isArray(params) ? params : [params]).filter(
+					(item) => (item.value as Array<number | null>)[1] != null
+				);
+				if (!list.length) return '';
+				const time = (list[0].value as number[])[0];
+				const rows = list.map(
+					(item) => `${item.marker}${item.seriesName}: <b>${(item.value as number[])[1].toFixed(2)}</b>`
+				);
+				return [formatMonth(time), ...rows].join('<br>');
+			}
+		},
+		xAxis: { type: 'time', ...AXIS_STYLE, splitLine: { show: false } },
+		yAxis: {
+			type: 'value',
+			name: 'NO₂ ÷ NOx',
+			nameTextStyle: { color: '#505a5f', fontSize: 11, align: 'left' },
+			min: 0,
+			max: 1,
+			...AXIS_STYLE
+		},
+		series: sites.map((site, index) => {
+			const line = siteLine(sites, site, index, selected);
+			return {
+				name: site.name,
+				type: 'line',
+				symbol: 'none',
+				// A month too incomplete to count is a gap, not a guess.
+				connectNulls: false,
+				lineStyle: { width: line.width, type: line.type },
+				color: line.color,
+				z: line.z,
+				data: Object.entries(site.no2ToNox).map(([month, value]) => [middle(month), value]),
+				// The events are drawn once, on the first series.
+				markLine:
+					index === 0
+						? {
+								silent: true,
+								symbol: 'none',
+								label: { show: false },
+								lineStyle: { color: '#0b0c0c', width: 1, type: 'dotted' },
+								data: events.map((event) => ({ xAxis: Date.parse(`${event.date}T00:00Z`) }))
+							}
+						: undefined
+			};
+		})
+	};
+}
+
 /** Annual means for every site, so the sites can be compared at a glance. */
 export function annualOption(
 	sites: Site[],
@@ -337,30 +420,28 @@ export function annualOption(
 			nameTextStyle: { color: '#505a5f', fontSize: 11, align: 'left' },
 			...AXIS_STYLE
 		},
-		series: sites.map((site, index) => ({
-			name: site.name,
-			type: 'line',
-			symbolSize: site.code === selected ? 7 : 5,
-			// The selected site is drawn heavier; line style separates the two
-			// sites of each type so colour is not doing all the work.
-			lineStyle: {
-				width: site.code === selected ? 3.2 : 1.6,
-				type: sites.findIndex((s) => s.type === site.type) === index ? 'solid' : 'dashed'
-			},
-			color: SITE_COLOURS[site.type] ?? '#505a5f',
-			z: site.code === selected ? 5 : 2,
-			data: years.map((year) => site.stats[pollutant].annual[year]),
-			// The events are drawn once, on the first series.
-			markLine:
-				index === 0
-					? {
-							silent: true,
-							symbol: 'none',
-							label: { show: false },
-							lineStyle: { color: '#0b0c0c', width: 1, type: 'dotted' },
-							data: events.map((event) => ({ xAxis: event.date.slice(0, 4) }))
-						}
-					: undefined
-		}))
+		series: sites.map((site, index) => {
+			const line = siteLine(sites, site, index, selected);
+			return {
+				name: site.name,
+				type: 'line',
+				symbolSize: site.code === selected ? 7 : 5,
+				lineStyle: { width: line.width, type: line.type },
+				color: line.color,
+				z: line.z,
+				data: years.map((year) => site.stats[pollutant].annual[year]),
+				// The events are drawn once, on the first series.
+				markLine:
+					index === 0
+						? {
+								silent: true,
+								symbol: 'none',
+								label: { show: false },
+								lineStyle: { color: '#0b0c0c', width: 1, type: 'dotted' },
+								data: events.map((event) => ({ xAxis: event.date.slice(0, 4) }))
+							}
+						: undefined
+			};
+		})
 	};
 }

@@ -6,6 +6,7 @@
  * `static/data`; moving a dial fetches the file that holds the answer. Files
  * are small and are kept once fetched, so going back to a setting is instant.
  */
+import { version } from '$app/environment';
 import { base } from '$app/paths';
 import type { Language, Settings } from './code';
 import type { Manifest, RunFile, Series } from './types';
@@ -16,7 +17,10 @@ const cache = new Map<string, Promise<unknown>>();
 function load<T>(path: string): Promise<T> {
 	let pending = cache.get(path);
 	if (!pending) {
-		pending = fetch(`${base}/data/${path}`).then((response) => {
+		// The build's version in the address, so that after the site is
+		// republished a browser fetches the new results rather than reusing
+		// ones it kept from before (GitHub Pages lets it keep them ten minutes).
+		pending = fetch(`${base}/data/${path}?v=${version}`).then((response) => {
 			if (!response.ok) throw new Error(`Could not load ${path} (${response.status})`);
 			return response.json();
 		});

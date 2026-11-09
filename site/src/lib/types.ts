@@ -26,6 +26,10 @@ export interface Site {
 	/** The isolation settings precomputed for this site. */
 	isolations: string[];
 	stats: Record<string, PollutantStats>;
+	/** NO₂ as a share of NOx, by month ("2018-01"): the ratio of the monthly
+	 *  means over the hours both were measured. Null for a month under 75%
+	 *  complete. */
+	no2ToNox: Record<string, number | null>;
 }
 
 export interface EventMarker {
