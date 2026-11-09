@@ -73,8 +73,10 @@ YEARS = (2018, 2025)
 
 # The Bradford site, and the nearest AURN stations to compare it with. Bradford
 # has only one station with a long NOx record, so the comparison and control
-# sites are its neighbours.
-SITES = ["BDMA", "LED6", "LEED", "DYAG"]
+# sites are its neighbours. Ladybower, in the Peak District, is the nearest
+# rural background station that measures NOx: the regional background that
+# the city and the street add to.
+SITES = ["BDMA", "LED6", "LEED", "DYAG", "LB"]
 
 POLLUTANTS = ["no2", "nox"]
 

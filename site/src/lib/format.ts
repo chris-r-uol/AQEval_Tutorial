@@ -67,6 +67,13 @@ export function formatSigned(value: number | null | undefined, digits = 1, suffi
 
 export const UNIT = 'µg/m³';
 
+/** What each AURN site classification means, in a word or two. */
+export const SITE_TYPE_LABEL: Record<string, string> = {
+	'Urban Traffic': 'Roadside',
+	'Urban Background': 'Urban background',
+	'Rural Background': 'Rural background'
+};
+
 export const POLLUTANT_LABEL: Record<string, string> = { no2: 'NO₂', nox: 'NOx' };
 
 export const POLLUTANT_NAME: Record<string, string> = {

@@ -1,5 +1,5 @@
 {
- "generated": "2026-11-05",
+ "generated": "2026-11-09",
  "engines": {
   "python": "aqeval 0.7.3",
   "r": "AQEval 0.6.11, mgcv 1.9.4, R version 4.6.1 (2026-06-24)"
@@ -318,6 +318,86 @@
      "before": 26.2,
      "after": 27.5,
      "mean": 28.2
+    }
+   }
+  },
+  {
+   "code": "LB",
+   "name": "Ladybower",
+   "type": "Rural Background",
+   "authority": "High Peak",
+   "lat": 53.40337,
+   "lon": -1.752006,
+   "insideCaz": false,
+   "kmFromBradford": 43.6,
+   "isolations": [
+    "ds0-dw0-bgnone",
+    "ds0-dw1-bgnone",
+    "ds1-dw0-bgnone",
+    "ds1-dw1-bgnone",
+    "ds0-dw0-bgair_temp",
+    "ds0-dw1-bgair_temp",
+    "ds1-dw0-bgair_temp",
+    "ds1-dw1-bgair_temp",
+    "ds0-dw0-bgleed",
+    "ds0-dw1-bgleed",
+    "ds1-dw0-bgleed",
+    "ds1-dw1-bgleed",
+    "ds0-dw0-bgdyag",
+    "ds0-dw1-bgdyag",
+    "ds1-dw0-bgdyag",
+    "ds1-dw1-bgdyag"
+   ],
+   "stats": {
+    "no2": {
+     "annual": {
+      "2018": 5.7,
+      "2019": 6.1,
+      "2020": 4.6,
+      "2021": 4.7,
+      "2022": 5.2,
+      "2023": 4.2,
+      "2024": 4.1,
+      "2025": 4.5
+     },
+     "capture": {
+      "2018": 92.0,
+      "2019": 94.0,
+      "2020": 90.0,
+      "2021": 99.0,
+      "2022": 98.0,
+      "2023": 99.0,
+      "2024": 69.0,
+      "2025": 99.0
+     },
+     "before": 5.0,
+     "after": 4.4,
+     "mean": 4.9
+    },
+    "nox": {
+     "annual": {
+      "2018": 7.0,
+      "2019": 7.3,
+      "2020": 5.5,
+      "2021": 5.7,
+      "2022": 6.3,
+      "2023": 4.7,
+      "2024": 4.7,
+      "2025": 5.0
+     },
+     "capture": {
+      "2018": 92.0,
+      "2019": 94.0,
+      "2020": 90.0,
+      "2021": 99.0,
+      "2022": 98.0,
+      "2023": 99.0,
+      "2024": 69.0,
+      "2025": 99.0
+     },
+     "before": 6.0,
+     "after": 5.1,
+     "mean": 5.8
     }
    }
   }

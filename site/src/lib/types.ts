@@ -16,7 +16,7 @@ export interface PollutantStats {
 export interface Site {
 	code: string;
 	name: string;
-	/** AURN classification, e.g. "Urban Traffic". */
+	/** AURN classification: "Urban Traffic", "Urban Background" or "Rural Background". */
 	type: string;
 	authority: string;
 	lat: number;
