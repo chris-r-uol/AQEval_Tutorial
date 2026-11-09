@@ -15,7 +15,7 @@
 	import { afterNavigate, replaceState } from '$app/navigation';
 	import type { Feature, Polygon } from 'geojson';
 	import { describeSegments, points, timeline } from '$lib/analysis';
-	import { annualOption, figureOption, PIN_COLOURS } from '$lib/charts';
+	import { annualOption, figureOption, PIN_COLOURS, ratioOption } from '$lib/charts';
 	import { isolates, reached, type Language, type Settings, type Stage } from '$lib/code';
 	import { CODESPACE_URL, REPOSITORY_URL } from '$lib/config';
 	import { loadBoundary, loadHourly, loadManifest, loadMeasured, loadRuns } from '$lib/data';
@@ -285,6 +285,8 @@
 			: null
 	);
 
+	let ratio = $derived(manifest ? ratioOption(manifest.sites, experiment.settings.site, manifest.events) : null);
+
 	let selectedSite = $derived(manifest?.sites.find((site) => site.code === experiment.settings.site));
 	let captureYears = $derived(
 		selectedSite ? Object.entries(selectedSite.stats[experiment.settings.pollutant].capture) : []
@@ -534,6 +536,21 @@
 						A year under 75% is usually treated as incomplete.
 					</p>
 				{/if}
+
+				<h3 class="sub">NO₂ as a share of NOx, each month</h3>
+				{#if ratio}
+					<Chart
+						option={ratio}
+						height="230px"
+						description={`Monthly ratio of NO₂ to NOx at each site, ${manifest.years[0]} to ${manifest.years[1]}`}
+					/>
+				{/if}
+				<p class="muted capture">
+					The measurements only, with no analysis: each month's average NO₂ divided by its average NOx, over
+					the hours when both were measured. A month under 75% complete is left out. NOx is NO plus NO₂.
+					Next to a busy road most of it is NO, fresh from exhausts, so NO₂'s share is low. Away from the
+					traffic the NO has had time to react with ozone and become NO₂, so the share is higher.
+				</p>
 			</section>
 		</div>
 

@@ -625,6 +625,19 @@ def export() -> None:
                 "mean": number(data[pollutant].mean(), 1),
             }
 
+        # NO2 as a share of NOx, month by month: the ratio of the two monthly
+        # means, over the hours when both were measured. A month with under
+        # 75% of its hours measured is left out, as an incomplete year would be.
+        paired = data.set_index("date")[["no2", "nox"]].dropna()
+        months = pd.date_range(f"{YEARS[0]}-01-01", f"{YEARS[1]}-12-01", freq="MS")
+        sums = paired.resample("MS").sum().reindex(months)
+        counts = paired["no2"].resample("MS").count().reindex(months, fill_value=0)
+        complete = counts >= 0.75 * months.days_in_month * 24
+        no2_to_nox = {
+            f"{month:%Y-%m}": number(sums.at[month, "no2"] / sums.at[month, "nox"], 3) if complete[month] else None
+            for month in months
+        }
+
         sites.append(
             {
                 "code": code,
@@ -637,6 +650,7 @@ def export() -> None:
                 "kmFromBradford": round(haversine_km(*BRADFORD_CENTRE, lat, lon), 1),
                 "isolations": [iso_key(*setting) for setting in iso_settings(code)],
                 "stats": stats,
+                "no2ToNox": no2_to_nox,
             }
         )
 
